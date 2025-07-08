@@ -274,7 +274,42 @@ For nostr-related utilities always look first in the `models` or `purplebase` pa
 
 ### Rendering entities in notes
 
-TODO: COMPLETE
+Use `NoteParser.parse()` to automatically detect and render NIP-19 entities, media URLs, and links in note content:
+
+```dart
+import 'package:purplestack/utils/utils.dart';
+
+// Basic usage with styling
+NoteParser.parse(
+  note.content,
+  textStyle: const TextStyle(fontSize: 16, color: Colors.black87),
+  linkStyle: const TextStyle(color: Colors.blue, decoration: TextDecoration.underline),
+)
+
+// With custom widget replacements
+NoteParser.parse(
+  note.content,
+  textStyle: const TextStyle(fontSize: 16),
+  onNip19Entity: (entity) {
+    // Replace npub1..., note1..., nevent1... with custom widgets
+    final decoded = Utils.decodeShareableIdentifier(entity);
+    return switch (decoded) {
+      ProfileData() => ProfileChip(pubkey: decoded.pubkey),
+      EventData() => NotePreview(eventId: decoded.eventId),
+      _ => null, // Falls back to styled text
+    };
+  },
+  onMediaUrl: (url) => CachedNetworkImage(imageUrl: url, height: 200),
+  onHttpUrl: (url) => LinkChip(url: url),
+)
+```
+
+**Features:**
+- Automatically detects `npub1...`, `note1...`, `nevent1...`, etc. (handles `nostr:` prefix)
+- Identifies media URLs by file extension (jpg, png, mp4, etc.)
+- Returns `RichText` with `WidgetSpan` for seamless text/widget mixing
+- Validates NIP-19 entities using `Utils.decodeShareableIdentifier()`
+- Graceful fallbacks when callbacks return `null`
 
 #### Use in Filters
 
