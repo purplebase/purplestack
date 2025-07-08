@@ -272,6 +272,10 @@ Always use valid pubkeys, `Utils.generate64Hex()` and other utils allow you to g
 
 For nostr-related utilities always look first in the `models` or `purplebase` packages, where they are likely available, before creating your own.
 
+### Rendering entities in notes
+
+TODO: COMPLETE
+
 #### Use in Filters
 
 The base Nostr protocol uses hex string identifiers when filtering by event IDs and pubkeys. Nostr filters only accept hex strings.

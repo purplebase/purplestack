@@ -5,13 +5,23 @@
 - Use latest Dart features and Dart-specific idioms
   - Always prefer pattern matching, switch statements, sealed classes, built-in collection manipulations (spread operator, collection-if and collection-for, etc) over Java-like syntax
   - Use `map`, `where`, `reduce` rather than an empty target collection and adding each item in a for loop, minimize for loops in general
-- Use Flutter best practices
+  - For pattern-matcheable classes prefer case. Example: `if (value case EventInput(:final prop))` rather than `if (value is EventInput) { final prop = value.prop }`
+  - Use pattern matching operators like `||`:
+    ```dart
+    final kindCheck = switch (event.kind) {
+      >= 10000 && < 20000 || 0 || 3 => this is ReplaceableModel,
+      >= 20000 && < 30000 => this is EphemeralModel,
+      >= 30000 && < 40000 => this is ParameterizableReplaceableModel,
+      _ => this is RegularModel,
+    };
+    ```
 - Always use meaningful variable and function names
 - Add comments for complex logic only
 - Always ensure no compiler errors nor warnings are left. The goal is to have ZERO compiler messages in the console. If in doubt, stop and ask, as some warnings can be turned off in analysis_options
 - Avoid superfluous comments like: `relay.stop(); // Stops the relay`. Only add comments in complex scenarios when code can't clearly express what is going on
 - Hardcoding and workarounds: **explicitly forbidden**. For example, do not make special cases just for tests to pass, like cheating in an exam. You should always prioritize the architecturally sound approach, even if it takes a bit longer
 - Never use artificial waits (`Future.delayed`) unless it is absolutely necessary for a particular feature. Properly awaiting futures is the architecturally sound way and should always be prioritized.
+- Use Flutter best practices
 
 ### Architecture
 

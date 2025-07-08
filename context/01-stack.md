@@ -15,7 +15,7 @@ Development stack designed for AI agents to build Nostr-enabled Flutter applicat
 - **GoRouter**: Declarative routing
 - **Forui**: UI component library
 - **google_fonts**: Font management
-- **cached_network_image**: Image caching
+- **cached_network_image**: Image loading and caching
 - **flutter_markdown**: Markdown rendering
 - **auto_size_text**: Responsive text sizing
 - **skeletonizer**: Skeleton loading states
@@ -148,11 +148,13 @@ ListView.builder(
 
 Use the `google_fonts` package.
 
-### Loading and displaying images
+### Loading and displaying media
 
-Use the `cached_network_image` package.
+For images, use the available `cached_network_image` package.
 
 For viewing larger images with zoom, etc use the `easy_image_viewer` package.
+
+If the user requests video support, use the `chewie` package that must be installed.
 
 ### Recommended Styles by Use Case
 
