@@ -1,5 +1,7 @@
 # purplestack
 
+![purplestack](assets/images/purplestack.png)
+
 Development stack designed for AI agents to build Nostr-enabled Flutter applications. It includes a complete tech stack based on Riverpod and Purplebase, along with documentation and recipes for common implementation scenarios.
 
 See [CONTEXT](CONTEXT.md) for more.
