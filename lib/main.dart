@@ -41,6 +41,7 @@ class PurplestackApp extends ConsumerWidget {
         title: title,
         theme: ThemeData(useMaterial3: true),
         home: Scaffold(body: Center(child: CircularProgressIndicator())),
+        debugShowCheckedModeBanner: false,
       ),
       AsyncError(:final error) => MaterialApp(
         title: title,
@@ -66,6 +67,7 @@ class PurplestackApp extends ConsumerWidget {
             ),
           ),
         ),
+        debugShowCheckedModeBanner: false,
       ),
       _ => MaterialApp.router(
         title: title,

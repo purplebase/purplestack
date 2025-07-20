@@ -77,25 +77,9 @@ This is a standard Flutter app with multi-platform support, but here are additio
 
 The project uses [Material 3](https://m3.material.io/).
 
-Enable it by setting `useMaterial3: true` in theme:
+The setting `useMaterial3: true` is already used in the default `MaterialApp`.
 
-```dart
-MaterialApp(
-  theme: ThemeData(
-    useMaterial3: true,
-    colorSchemeSeed: Colors.purple, // Generate entire color scheme from a single color
-    brightness: Brightness.light,
-  ),
-  darkTheme: ThemeData(
-    useMaterial3: true,
-    colorSchemeSeed: Colors.purple,
-    brightness: Brightness.dark,
-  ),
-  // ...
-)
-```
-
-### Use built-in Material 3 Components
+### Use Built-in Material 3 Components
 
 - **AppBar**: A top app bar that displays information and actions related to the current screen, typically containing a title, navigation icon, and action items.
 
@@ -593,7 +577,7 @@ To display profile data for a user by their Nostr pubkey (such as an event autho
 
 ### Signing in a profile
 
-Make sure to **always** use `amber_signer` package first, unless the user instructs to support signing in with nsec (`Bip340PrivateKeySigner`). All signer interfaces inherit from `Signer`.
+Make sure to **always** use `amber_signer` package first to sign in with the NIP-55-compatible "Amber" Android app, unless the user instructs to support signing in with nsec (`Bip340PrivateKeySigner`). All signer interfaces inherit from `Signer`.
 
 The `Profile` class has all the necessary properties to display a profile in a widget.
 
@@ -847,12 +831,106 @@ class MessageTile extends StatelessWidget {
 
 Any time you need to store custom data, use the `CustomData` model from the `models` package. Use `setProperty` to set tags, and feel free to use encryption as defined above for sensitive data (NWC strings, cashu tokens, for example).
 
+## Error Handling and Debugging
+
+### Automatic Error Handling
+
+The underlying `models` implementation (via the `purplebase` package) automatically handles all low-level Nostr protocol errors:
+
+- **Relay connections**: Connection failures, timeouts, reconnection logic
+- **Malformed events**: Invalid event structure, missing fields, parsing errors
+- **Signature verification**: BIP-340 signature validation and rejection of invalid events
+- **Network timeouts**: Request timeouts and retry mechanisms
+- **Rate limiting**: Relay rate limit handling and backoff strategies
+
+**Important**: Your UI code does not need to handle these low-level errors. The storage layer manages all protocol-level error recovery automatically.
+
+### Debug Information Provider
+
+For debugging and monitoring, Purplebase exposes the `infoNotifierProvider` which streams diagnostic messages about the Nostr operations:
+
+```dart
+// Listen to debug info in your app
+ref.listen(infoNotifierProvider, (previous, next) {
+  print('Nostr Debug: $next');
+  // Or display in a debug screen, log to file, etc.
+});
+```
+
+Use this provider to:
+- Monitor relay connection status
+- Debug event publishing issues
+- Track storage operations
+- Monitor network performance
+- Troubleshoot synchronization problems
+
+## Security and Environment
+
+### API Key Management
+
+**No API keys are required or handled** in Purplestack projects. The Nostr protocol is decentralized and does not require API keys for accessing relays or publishing events.
+
+### Private Key Security
+
+#### Default: In-Memory Storage
+By default, private keys (nsec) are handled in-memory only when using `Bip340PrivateKeySigner`:
+
+```dart
+// Private key is only stored in memory during app session
+final signer = Bip340PrivateKeySigner(privateKeyHex, ref);
+await signer.initialize();
+
+// When app closes, private key is lost and user must re-enter
+```
+
+#### Persistent Storage (Optional)
+If the user specifically requests persistent nsec signing, use the `flutter_secure_storage` package:
+
+```dart
+dependencies:
+  flutter_secure_storage: ^9.0.0
+```
+
+```dart
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+
+class SecureSignerManager {
+  static const _storage = FlutterSecureStorage();
+  static const _keyPrivateKey = 'nostr_private_key';
+
+  // Store private key securely
+  static Future<void> storePrivateKey(String privateKey) async {
+    await _storage.write(key: _keyPrivateKey, value: privateKey);
+  }
+
+  // Retrieve private key
+  static Future<String?> getPrivateKey() async {
+    return await _storage.read(key: _keyPrivateKey);
+  }
+
+  // Clear stored private key
+  static Future<void> clearPrivateKey() async {
+    await _storage.delete(key: _keyPrivateKey);
+  }
+
+  // Initialize signer from secure storage
+  static Future<Bip340PrivateKeySigner?> initializeFromStorage(WidgetRef ref) async {
+    final privateKey = await getPrivateKey();
+    if (privateKey != null) {
+      return Bip340PrivateKeySigner(privateKey, ref);
+    }
+    return null;
+  }
+}
+```
+
+**Security Note**: Only implement persistent private key storage if explicitly requested by the user. The default and recommended approach is to use the `amber_signer` package with NIP-55 compatible signing apps like Amber.
+
 ### Rendering Rich Text Content
 
 Nostr text notes (kind 1, 11, and 1111) have a plaintext `content` field that may contain URLs, hashtags, and Nostr URIs.
 
-TODO: Implement small Flutter lib for this (take from minimal-sample-app)
-
+Use the `NoteParser` class (and utilities in the `note_parser.dart` file) for this.
 # models 👯
 
 Fast local-first nostr framework designed to make developers (and vibe-coders) happy. Written in Dart.
@@ -1083,6 +1161,7 @@ extension WidgetRefStorage on WidgetRef {
 - [x] **NIP-09: Event Deletion Request**
 - [x] **NIP-10: Text Notes and Threads**
 - [x] **NIP-11: Relay Information Document**
+- [x] **NIP-18: Reposts**
 - [x] **NIP-19: bech32-encoded entities**
 - [x] **NIP-21: `nostr:` URI scheme**
 - [x] **NIP-22: Comment**
@@ -1117,6 +1196,22 @@ print(note.content); // Access domain properties
 // Mutable, unsigned partial model for creation
 final partialNote = PartialNote('Hello, nostr!');
 final signedNote = await partialNote.signWith(signer);
+```
+
+**Converting Models to Partial Models:**
+
+Models can be converted back to editable partial models using the `toPartial()` method:
+
+```dart
+// Load an existing note
+final note = await ref.storage.get<Note>(noteId);
+
+// Convert to partial for editing
+final partialNote = note.toPartial<PartialNote>();
+
+// Modify and re-sign
+partialNote.content = 'Updated content';
+final updatedNote = await partialNote.signWith(signer);
 ```
 
 **Important Notes:**
@@ -1243,6 +1338,9 @@ final signer = Bip340PrivateKeySigner(privateKey, ref);
 
 // Initialize (sets the pubkey as active)
 await signer.initialize();
+
+// Check if signer is available for use
+final isAvailable = await signer.isAvailable;
 
 // Watch the active profile (use RemoteSource() if you want to fetch from relays)
 final activeProfile = ref.watch(Signer.activeProfileProvider(LocalSource()));
@@ -1577,6 +1675,24 @@ await ref.storage.save({newReaction});
 // and any UI watching it will rebuild
 ```
 
+**Community Chat Messages:**
+
+```dart
+// Load a community with its chat messages
+final communityState = ref.watch(
+  query<Community>(
+    ids: {communityId},
+    and: (community) => {
+      community.chatMessages, // Load associated chat messages
+    },
+  ),
+);
+
+// Access the chat messages
+final community = communityState.models.first;
+final messages = community.chatMessages.toList();
+```
+
 ### Direct Messages & Encryption
 
 Create encrypted direct messages using NIP-04 and NIP-44.
@@ -1850,6 +1966,9 @@ final config = StorageConfiguration(
   // Default relay group
   defaultRelayGroup: 'popular',
   
+  // Default source for queries when not specified
+  defaultQuerySource: LocalAndRemoteSource(stream: false),
+  
   // Connection timeouts
   idleTimeout: Duration(minutes: 5),
   responseTimeout: Duration(seconds: 6),
@@ -1910,6 +2029,7 @@ Available built-in models and their relationships.
 - `Note` (kind 1) - Text posts with reply threading
 - `ContactList` (kind 3) - Following/followers
 - `DirectMessage` (kind 4) - Encrypted private messages
+- `Repost` (kind 6) - Reposts of other notes (NIP-18)
 - `Reaction` (kind 7) - Emoji reactions to events
 - `ChatMessage` (kind 9) - Public chat messages
 
@@ -1917,11 +2037,11 @@ Available built-in models and their relationships.
 - `Article` (kind 30023) - Long-form articles
 - `App` (kind 32267) - App metadata and listings
 - `Release` (kind 30063) - Software releases
-- `FileMetadata` (kind 1063) - File information
+- `FileMetadata` (kind 1063) - File information with release relationship
 - `SoftwareAsset` (kind 3063) - Software binaries
 
 **Social Models:**
-- `Community` (kind 10222) - Community definitions
+- `Community` (kind 10222) - Community definitions with chatMessages relationship
 - `TargetedPublication` (kind 30222) - Targeted content
 - `Comment` (kind 1111) - Comments on content
 

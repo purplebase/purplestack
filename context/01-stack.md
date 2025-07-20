@@ -77,25 +77,9 @@ This is a standard Flutter app with multi-platform support, but here are additio
 
 The project uses [Material 3](https://m3.material.io/).
 
-Enable it by setting `useMaterial3: true` in theme:
+The setting `useMaterial3: true` is already used in the default `MaterialApp`.
 
-```dart
-MaterialApp(
-  theme: ThemeData(
-    useMaterial3: true,
-    colorSchemeSeed: Colors.purple, // Generate entire color scheme from a single color
-    brightness: Brightness.light,
-  ),
-  darkTheme: ThemeData(
-    useMaterial3: true,
-    colorSchemeSeed: Colors.purple,
-    brightness: Brightness.dark,
-  ),
-  // ...
-)
-```
-
-### Use built-in Material 3 Components
+### Use Built-in Material 3 Components
 
 - **AppBar**: A top app bar that displays information and actions related to the current screen, typically containing a title, navigation icon, and action items.
 

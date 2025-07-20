@@ -202,7 +202,7 @@ To display profile data for a user by their Nostr pubkey (such as an event autho
 
 ### Signing in a profile
 
-Make sure to **always** use `amber_signer` package first, unless the user instructs to support signing in with nsec (`Bip340PrivateKeySigner`). All signer interfaces inherit from `Signer`.
+Make sure to **always** use `amber_signer` package first to sign in with the NIP-55-compatible "Amber" Android app, unless the user instructs to support signing in with nsec (`Bip340PrivateKeySigner`). All signer interfaces inherit from `Signer`.
 
 The `Profile` class has all the necessary properties to display a profile in a widget.
 
@@ -456,8 +456,103 @@ class MessageTile extends StatelessWidget {
 
 Any time you need to store custom data, use the `CustomData` model from the `models` package. Use `setProperty` to set tags, and feel free to use encryption as defined above for sensitive data (NWC strings, cashu tokens, for example).
 
+## Error Handling and Debugging
+
+### Automatic Error Handling
+
+The underlying `models` implementation (via the `purplebase` package) automatically handles all low-level Nostr protocol errors:
+
+- **Relay connections**: Connection failures, timeouts, reconnection logic
+- **Malformed events**: Invalid event structure, missing fields, parsing errors
+- **Signature verification**: BIP-340 signature validation and rejection of invalid events
+- **Network timeouts**: Request timeouts and retry mechanisms
+- **Rate limiting**: Relay rate limit handling and backoff strategies
+
+**Important**: Your UI code does not need to handle these low-level errors. The storage layer manages all protocol-level error recovery automatically.
+
+### Debug Information Provider
+
+For debugging and monitoring, Purplebase exposes the `infoNotifierProvider` which streams diagnostic messages about the Nostr operations:
+
+```dart
+// Listen to debug info in your app
+ref.listen(infoNotifierProvider, (previous, next) {
+  print('Nostr Debug: $next');
+  // Or display in a debug screen, log to file, etc.
+});
+```
+
+Use this provider to:
+- Monitor relay connection status
+- Debug event publishing issues
+- Track storage operations
+- Monitor network performance
+- Troubleshoot synchronization problems
+
+## Security and Environment
+
+### API Key Management
+
+**No API keys are required or handled** in Purplestack projects. The Nostr protocol is decentralized and does not require API keys for accessing relays or publishing events.
+
+### Private Key Security
+
+#### Default: In-Memory Storage
+By default, private keys (nsec) are handled in-memory only when using `Bip340PrivateKeySigner`:
+
+```dart
+// Private key is only stored in memory during app session
+final signer = Bip340PrivateKeySigner(privateKeyHex, ref);
+await signer.initialize();
+
+// When app closes, private key is lost and user must re-enter
+```
+
+#### Persistent Storage (Optional)
+If the user specifically requests persistent nsec signing, use the `flutter_secure_storage` package:
+
+```dart
+dependencies:
+  flutter_secure_storage: ^9.0.0
+```
+
+```dart
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+
+class SecureSignerManager {
+  static const _storage = FlutterSecureStorage();
+  static const _keyPrivateKey = 'nostr_private_key';
+
+  // Store private key securely
+  static Future<void> storePrivateKey(String privateKey) async {
+    await _storage.write(key: _keyPrivateKey, value: privateKey);
+  }
+
+  // Retrieve private key
+  static Future<String?> getPrivateKey() async {
+    return await _storage.read(key: _keyPrivateKey);
+  }
+
+  // Clear stored private key
+  static Future<void> clearPrivateKey() async {
+    await _storage.delete(key: _keyPrivateKey);
+  }
+
+  // Initialize signer from secure storage
+  static Future<Bip340PrivateKeySigner?> initializeFromStorage(WidgetRef ref) async {
+    final privateKey = await getPrivateKey();
+    if (privateKey != null) {
+      return Bip340PrivateKeySigner(privateKey, ref);
+    }
+    return null;
+  }
+}
+```
+
+**Security Note**: Only implement persistent private key storage if explicitly requested by the user. The default and recommended approach is to use the `amber_signer` package with NIP-55 compatible signing apps like Amber.
+
 ### Rendering Rich Text Content
 
 Nostr text notes (kind 1, 11, and 1111) have a plaintext `content` field that may contain URLs, hashtags, and Nostr URIs.
 
-TODO: Implement small Flutter lib for this (take from minimal-sample-app)
+Use the `NoteParser` class (and utilities in the `note_parser.dart` file) for this.
