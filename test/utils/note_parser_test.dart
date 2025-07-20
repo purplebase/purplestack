@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:purplestack/utils/note_parser.dart';
+import 'package:purplestack/widgets/common/note_parser.dart';
 
 void main() {
   group('NoteParser', () {

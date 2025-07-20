@@ -252,7 +252,7 @@ If the user does not specify, **Modern/Clean** style is the default.
 
 ### Theme System
 
-The project includes a complete light/dark theme system. The theme can be controlled via `themeModeProvider` provider for programmatic theme switching.
+The project includes a complete light/dark theme system. The theme can be controlled via the `brightnessProvider` provider for programmatic theme switching.
 
 ### Color Scheme Implementation
 

@@ -40,7 +40,7 @@ void main() async {
         }),
       );
 
-      return CallToolResult(
+      return CallToolResult.fromContent(
         content: [
           TextContent(text: 'Results: ${packageDetails.length}'),
           ...packageDetails.map(
