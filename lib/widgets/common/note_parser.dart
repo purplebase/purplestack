@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:models/models.dart';
-import 'package:purplestack/utils/app_constants.dart';
 import 'package:purplestack/utils/time_utils.dart';
 import 'package:purplestack/widgets/common/profile_avatar.dart';
 
@@ -39,6 +38,7 @@ class NoteParser {
 
   /// Parses note content and returns a RichText widget with custom entity replacements.
   ///
+  /// [context] - The build context for accessing theme
   /// [content] - The note text content to parse
   /// [onNostrEntity] - Optional callback for replacing NIP-19 entities (npub, note, etc.)
   /// [onHttpUrl] - Optional callback for replacing HTTP URLs
@@ -46,6 +46,7 @@ class NoteParser {
   /// [textStyle] - Default text style for regular text
   /// [linkStyle] - Text style for unhandled links (when callback returns null)
   static Widget parse(
+    BuildContext context,
     String content, {
     Widget? Function(String entity)? onNostrEntity,
     Widget? Function(String httpUrl)? onHttpUrl,
@@ -128,7 +129,7 @@ class NoteParser {
         final style =
             linkStyle ??
             textStyle?.copyWith(
-              color: Colors.blue,
+              color: Theme.of(context).colorScheme.primary,
               decoration: TextDecoration.underline,
             );
         spans.add(TextSpan(text: match.text, style: style));
@@ -282,22 +283,19 @@ class ProfileEntityWidget extends ConsumerWidget {
     return GestureDetector(
       onTap: () => debugPrint('Navigate to profile: ${profileData.pubkey}'),
       child: Container(
-        padding: const EdgeInsets.symmetric(
-          horizontal: AppConstants.spacingS,
-          vertical: AppConstants.spacingXS,
-        ),
+        padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 4.0),
         decoration: BoxDecoration(
           color: colorPair[0].withValues(alpha: 0.1),
-          borderRadius: BorderRadius.circular(AppConstants.radiusS),
+          borderRadius: BorderRadius.circular(8.0),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
             ProfileAvatar(profile: profile, radius: 8, borderColors: colorPair),
-            const SizedBox(width: AppConstants.spacingXS),
+            const SizedBox(width: 4.0),
             Text(
               displayName,
-              style: AppConstants.bodyStyle.copyWith(
+              style: Theme.of(context).textTheme.bodyMedium!.copyWith(
                 fontSize: 14,
                 fontWeight: FontWeight.w500,
                 color: colorPair[0],
@@ -330,23 +328,23 @@ class EventEntityWidget extends ConsumerWidget {
 
     if (note == null) {
       return Container(
-        margin: const EdgeInsets.symmetric(vertical: AppConstants.spacingS),
-        padding: const EdgeInsets.all(AppConstants.spacingM),
+        margin: const EdgeInsets.symmetric(vertical: 8.0),
+        padding: const EdgeInsets.all(16.0),
         decoration: BoxDecoration(
           color: Colors.grey[100],
-          borderRadius: BorderRadius.circular(AppConstants.radiusM),
+          borderRadius: BorderRadius.circular(12.0),
           border: Border.all(color: Colors.grey[300]!),
         ),
         child: Row(
           children: [
             Icon(Icons.note_alt, size: 16, color: Colors.grey[600]),
-            const SizedBox(width: AppConstants.spacingS),
+            const SizedBox(width: 8.0),
             Expanded(
               child: Text(
                 'Referenced note (${eventData.eventId.substring(0, 8)}...)',
-                style: AppConstants.captionStyle.copyWith(
-                  fontStyle: FontStyle.italic,
-                ),
+                style: Theme.of(
+                  context,
+                ).textTheme.bodySmall!.copyWith(fontStyle: FontStyle.italic),
               ),
             ),
           ],
@@ -354,47 +352,42 @@ class EventEntityWidget extends ConsumerWidget {
       );
     }
 
-    return Container(
-      margin: const EdgeInsets.symmetric(vertical: AppConstants.spacingS),
-      padding: const EdgeInsets.all(AppConstants.spacingM),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(AppConstants.radiusM),
-        border: Border.all(
-          color: colorPair[0].withValues(alpha: 0.2),
-          width: 1,
-        ),
-        boxShadow: [AppConstants.getCardShadow(colorPair[0])],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              ProfileAvatar(
-                profile: note.author.value,
-                radius: 12,
-                borderColors: colorPair,
-              ),
-              const SizedBox(width: AppConstants.spacingS),
-              Expanded(
-                child: Text(
-                  note.author.value?.nameOrNpub ?? 'Anonymous',
-                  style: AppConstants.bodyStyle.copyWith(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w500,
+    return Card(
+      margin: const EdgeInsets.symmetric(vertical: 8.0),
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                ProfileAvatar(
+                  profile: note.author.value,
+                  radius: 12,
+                  borderColors: colorPair,
+                ),
+                const SizedBox(width: 8.0),
+                Expanded(
+                  child: Text(
+                    note.author.value?.nameOrNpub ?? 'Anonymous',
+                    style: Theme.of(context).textTheme.bodyMedium!.copyWith(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w500,
+                    ),
                   ),
                 ),
-              ),
-              Text(
-                TimeUtils.formatTimestamp(note.createdAt),
-                style: AppConstants.captionStyle.copyWith(fontSize: 11),
-              ),
-            ],
-          ),
-          const SizedBox(height: AppConstants.spacingS),
-          ParsedContentWidget(content: note.content, colorPair: colorPair),
-        ],
+                Text(
+                  TimeUtils.formatTimestamp(note.createdAt),
+                  style: Theme.of(
+                    context,
+                  ).textTheme.bodySmall!.copyWith(fontSize: 11),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8.0),
+            ParsedContentWidget(content: note.content, colorPair: colorPair),
+          ],
+        ),
       ),
     );
   }
@@ -415,22 +408,19 @@ class AddressEntityWidget extends StatelessWidget {
     return GestureDetector(
       onTap: () => debugPrint('Navigate to address: ${addressData.identifier}'),
       child: Container(
-        padding: const EdgeInsets.symmetric(
-          horizontal: AppConstants.spacingS,
-          vertical: AppConstants.spacingXS,
-        ),
+        padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 4.0),
         decoration: BoxDecoration(
           color: colorPair[0].withValues(alpha: 0.1),
-          borderRadius: BorderRadius.circular(AppConstants.radiusS),
+          borderRadius: BorderRadius.circular(8.0),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
             Icon(Icons.article, size: 16, color: colorPair[0]),
-            const SizedBox(width: AppConstants.spacingXS),
+            const SizedBox(width: 4.0),
             Text(
               addressData.identifier,
-              style: AppConstants.bodyStyle.copyWith(
+              style: Theme.of(context).textTheme.bodyMedium!.copyWith(
                 fontSize: 14,
                 fontWeight: FontWeight.w500,
                 color: colorPair[0],
@@ -456,17 +446,14 @@ class GenericNip19Widget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: AppConstants.spacingS,
-        vertical: AppConstants.spacingXS,
-      ),
+      padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 4.0),
       decoration: BoxDecoration(
         color: colorPair[0].withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(AppConstants.radiusS),
+        borderRadius: BorderRadius.circular(8.0),
       ),
       child: Text(
         entity,
-        style: AppConstants.bodyStyle.copyWith(
+        style: Theme.of(context).textTheme.bodyMedium!.copyWith(
           fontSize: 14,
           fontWeight: FontWeight.w500,
           color: colorPair[0],
@@ -491,7 +478,7 @@ class ParsedContentWidget extends StatelessWidget {
     if (content.trim().isEmpty) {
       return Text(
         'No content',
-        style: AppConstants.bodyStyle.copyWith(
+        style: Theme.of(context).textTheme.bodyMedium!.copyWith(
           fontStyle: FontStyle.italic,
           color: Colors.grey[500],
         ),
@@ -499,11 +486,13 @@ class ParsedContentWidget extends StatelessWidget {
     }
 
     return NoteParser.parse(
+      context,
       content,
-      textStyle: AppConstants.bodyStyle.copyWith(fontSize: 15),
-      linkStyle: AppConstants.linkStyle.copyWith(
+      textStyle: Theme.of(context).textTheme.bodyMedium!.copyWith(fontSize: 15),
+      linkStyle: Theme.of(context).textTheme.bodyMedium!.copyWith(
         fontSize: 15,
         color: colorPair[0],
+        decoration: TextDecoration.underline,
       ),
       onNostrEntity: (entity) =>
           NostrEntityWidget(entity: entity, colorPair: colorPair),
@@ -522,24 +511,21 @@ class UrlChipWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      margin: const EdgeInsets.symmetric(vertical: AppConstants.spacingXS),
-      padding: const EdgeInsets.symmetric(
-        horizontal: AppConstants.spacingS,
-        vertical: AppConstants.spacingXS,
-      ),
+      margin: const EdgeInsets.symmetric(vertical: 4.0),
+      padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 4.0),
       decoration: BoxDecoration(
         color: colorPair[0].withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(AppConstants.radiusS),
+        borderRadius: BorderRadius.circular(8.0),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
           Icon(Icons.link, size: 16, color: colorPair[0]),
-          const SizedBox(width: AppConstants.spacingXS),
+          const SizedBox(width: 4.0),
           Flexible(
             child: Text(
               url,
-              style: AppConstants.bodyStyle.copyWith(
+              style: Theme.of(context).textTheme.bodyMedium!.copyWith(
                 fontSize: 14,
                 color: colorPair[0],
                 decoration: TextDecoration.underline,
@@ -562,13 +548,13 @@ class MediaWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      margin: const EdgeInsets.symmetric(vertical: AppConstants.spacingS),
+      margin: const EdgeInsets.symmetric(vertical: 8.0),
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(AppConstants.radiusM),
+        borderRadius: BorderRadius.circular(12.0),
         border: Border.all(color: colorPair[0].withValues(alpha: 0.2)),
       ),
       child: ClipRRect(
-        borderRadius: BorderRadius.circular(AppConstants.radiusM),
+        borderRadius: BorderRadius.circular(12.0),
         child: Image.network(
           url,
           fit: BoxFit.cover,
@@ -596,12 +582,12 @@ class MediaWidget extends StatelessWidget {
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Icon(Icons.broken_image, color: colorPair[0]),
-                  const SizedBox(width: AppConstants.spacingS),
+                  const SizedBox(width: 8.0),
                   Text(
                     'Media failed to load',
-                    style: AppConstants.captionStyle.copyWith(
-                      color: colorPair[0],
-                    ),
+                    style: Theme.of(
+                      context,
+                    ).textTheme.bodySmall!.copyWith(color: colorPair[0]),
                   ),
                 ],
               ),
