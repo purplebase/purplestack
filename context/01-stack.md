@@ -2,7 +2,9 @@
 
 Development stack designed for AI agents to build Nostr-enabled Flutter applications. It includes a complete tech stack with Purplebase and Riverpod, documentation and recipes for common implementation scenarios.
 
-**Important for AI Assistants**: The AI assistant's behavior and knowledge is defined by the CONTEXT.md file, which serves as the system prompt. ALWAYS refer to this document and follow these rules and recommendations.
+**Important for AI Assistants**:
+  - **Behavior**: The AI assistant's behavior and knowledge is defined by the CONTEXT.md file, which serves as the system prompt. ALWAYS refer to this document and follow these rules and recommendations.
+  - **First prompt**: When a user makes the first prompt, and only during that very first prompt, you MUST ALWAYS summarize what you understood, and ask important questions to ensure all requirements are crystal clear before starting to code. Do NOT skip this first step.
 
 ## Technology Stack
 
@@ -225,6 +227,8 @@ If the user requests video support, use the `chewie` package (not included, must
 ### Recommended Styles by Use Case
 
 If the user does not specify, **Modern/Clean** style is the default.
+
+Always adjust palettes to ensure a good contrast ratio, especially with text over backgrounds.
 
 - **Modern/Clean**: 
   - **Fonts**: Inter Variable, Outfit Variable, or Manrope
