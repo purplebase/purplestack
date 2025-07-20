@@ -2,7 +2,7 @@ name: purplestack
 description: "A new Flutter project."
 # The following line prevents the package from being accidentally published to
 # pub.dev using `flutter pub publish`. This is preferred for private packages.
-publish_to: 'none' # Remove this line if you wish to publish to pub.dev
+publish_to: "none" # Remove this line if you wish to publish to pub.dev
 
 # The following defines the version and build number for your application.
 # A version number is three numbers separated by dots, like 1.2.43
@@ -47,26 +47,27 @@ dependencies:
   hooks_riverpod: ^2.6.1
   path: ^1.9.1
   google_fonts: ^6.2.1
-  forui: ^0.13.1
-  forui_hooks: ^0.13.0
-  forui_assets: ^0.13.0
+  fluttertoast: ^8.2.12
+  table_calendar: ^3.2.0
+  pub_api_client: ^3.1.1
+  mcp_dart: ^0.5.3
 
 dependency_overrides:
   models:
-    path: ../models
-    # git:
-    #   url: https://github.com/purplebase/models
-    #   ref: 0.3.0
+    # path: ../models
+    git:
+      url: https://github.com/purplebase/models
+      ref: main
   purplebase:
-    path: ../purplebase
-    # git:
-    #   url: https://github.com/purplebase/purplebase
-    #   ref: 0.3.0
+    # path: ../purplebase
+    git:
+      url: https://github.com/purplebase/purplebase
+      ref: master
   amber_signer:
-    path: ../amber_signer
-    # git:
-    #   url: https://github.com/purplebase/amber_signer
-    #   ref: 0.1.0
+    # path: ../amber_signer
+    git:
+      url: https://github.com/purplebase/amber_signer
+      ref: main
 
 dev_dependencies:
   flutter_test:
@@ -85,7 +86,6 @@ dev_dependencies:
 
 # The following section is specific to Flutter packages.
 flutter:
-
   # The following line ensures that the Material Icons font is
   # included with your application, so that you can use the icons in
   # the material Icons class.

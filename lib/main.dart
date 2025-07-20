@@ -35,24 +35,22 @@ class PurplestackApp extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final title = 'Purplestack';
-    final theme = ThemeData(
-      colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
-    );
+
     return switch (ref.watch(appInitializationProvider)) {
       AsyncLoading() => MaterialApp(
         title: title,
-        theme: theme,
-        home: const CircularProgressIndicator(),
+        theme: ThemeData(useMaterial3: true),
+        home: Scaffold(body: Center(child: CircularProgressIndicator())),
       ),
       AsyncError(:final error) => MaterialApp(
         title: title,
-        theme: theme,
+        theme: ThemeData(useMaterial3: true),
         home: Scaffold(
           body: Center(
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                const Icon(Icons.error_outline, size: 64, color: Colors.red),
+                Icon(Icons.error_outline, size: 64, color: Colors.red),
                 const SizedBox(height: 16),
                 Text(
                   'Initialization Error',
@@ -71,7 +69,7 @@ class PurplestackApp extends ConsumerWidget {
       ),
       _ => MaterialApp.router(
         title: title,
-        theme: theme,
+        theme: ThemeData(useMaterial3: true),
         routerConfig: ref.watch(routerProvider),
         debugShowCheckedModeBanner: false,
         builder: (_, child) => child!,
@@ -108,6 +106,7 @@ final appInitializationProvider = FutureProvider<void>((ref) async {
             'wss://nos.lol',
           },
         },
+        defaultRelayGroup: 'default',
       ),
     ).future,
   );

@@ -10,11 +10,11 @@ Development stack designed for AI agents to build Nostr-enabled Flutter applicat
 - **Dart**: Programming language
 - **Riverpod / hooks_riverpod**: State management and dependency injection
 - **Flutter Hooks**: React-style hooks for Flutter
-- **Purplebase**: Local-first Nostr SDK with storage and relay pool
 - **models**: Domain models for Nostr events
+- **Purplebase**: Local-first Nostr SDK with storage and relay pool, implementation of the `models` package interface
 - **GoRouter**: Declarative routing
-- **Forui**: UI component library
 - **google_fonts**: Font management
+- **fluttertoast**: Toast components
 - **cached_network_image**: Image loading and caching
 - **flutter_markdown**: Markdown rendering
 - **auto_size_text**: Responsive text sizing
@@ -22,10 +22,11 @@ Development stack designed for AI agents to build Nostr-enabled Flutter applicat
 - **percent_indicator**: Progress indicators
 - **easy_image_viewer**: Image viewing
 - **flutter_layout_grid**: Grid layouts
-- **background_downloader**: Background file downloads
-- **install_plugin**: Android APK installation
-- **android_package_manager**: Query installed packages
 - **permission_handler**: Runtime permissions
+
+## MCP Servers
+
+There are several included MCP servers that you MUST use them appropriately: `developer` and `nostr` reference, as well as a `pubdev` server to look for suitable packages to install (if ever needed).
 
 ## Project Structure
 
@@ -42,52 +43,99 @@ This is a standard Flutter app with multi-platform support, but here are additio
 
 ## UI Components
 
-The project uses [Forui](https://forui.dev/).
+The project uses [Material 3](https://m3.material.io/).
 
-**Forui Components:**
-- **Accordion**: Expand/collapse content panels
-- **Alert**: Display important messages
-- **Avatar**: User profile images
-- **Badge**: Status indicators
-- **Banner**: Prominent message bar
-- **BottomSheet**: Modal bottom sheet
-- **Breadcrumbs**: Navigation hierarchy
-- **Button**: Action buttons
-- **Card**: Content containers
-- **Checkbox**: Boolean input
-- **Chip**: Compact elements for input, filter, or action
-- **CircularProgress**: Circular loading indicator
-- **Collapse**: Show/hide content
-- **DatePicker**: Date selection
-- **Dialog**: Modal dialogs
-- **Divider**: Visual separator
-- **Drawer**: Side navigation
-- **Dropdown**: Select from a list
-- **ExpansionPanel**: Expandable content
-- **Fab**: Floating action button
-- **IconButton**: Button with icon
-- **Input**: Text input field
-- **ListTile**: List item with leading/trailing widgets
-- **Menu**: Popup menu
-- **Pagination**: Page navigation
-- **Popover**: Floating content overlay
-- **ProgressBar**: Linear progress indicator
-- **Radio**: Single-choice input
-- **SegmentedControl**: Segmented selection
-- **Select**: Dropdown selection
-- **Sheet**: Modal sheet
-- **Skeleton**: Loading placeholder
-- **Slider**: Range input
-- **Snackbar**: Temporary message
-- **Stepper**: Multi-step process
-- **Switch**: Toggle input
-- **TabBar**: Tab navigation
-- **Table**: Data table
-- **Tabs**: Tabbed interface
-- **Textarea**: Multi-line text input
-- **Toast**: Toast notification
-- **ToggleButton**: Toggleable button
-- **Tooltip**: Informational hover text
+Enable it by setting `useMaterial3: true` in theme:
+
+```dart
+MaterialApp(
+  theme: ThemeData(
+    useMaterial3: true,
+    colorSchemeSeed: Colors.purple, // Generate entire color scheme from a single color
+    brightness: Brightness.light,
+  ),
+  darkTheme: ThemeData(
+    useMaterial3: true,
+    colorSchemeSeed: Colors.purple,
+    brightness: Brightness.dark,
+  ),
+  // ...
+)
+```
+
+### Use built-in Material 3 Components
+
+- **AppBar**: A top app bar that displays information and actions related to the current screen, typically containing a title, navigation icon, and action items.
+
+- **Alert/AlertDialog**: A modal dialog that interrupts the user's workflow to provide critical information or ask for a decision.
+
+- **CircleAvatar**: A circular widget that represents a user with an image, icon, or initials.
+
+- **Badge**: A small notification marker that appears on top of an icon or other content to indicate an unread message, notification, or update.
+
+- **MaterialBanner**: A persistent, non-modal surface that displays an important message and related actions.
+
+- **BottomSheet**: A surface that slides up from the bottom edge of the screen to reveal additional content.
+
+- **Button**: Various button types (Elevated, Filled, Outlined, Text) that trigger actions when pressed, with different emphasis levels based on importance.
+
+- **Card**: A container that presents content and actions on a single topic, with a distinct visual boundary and elevation shadow.
+
+- **Checkbox**: A selection control that allows users to select multiple items from a set or mark items as completed.
+
+- **Chip**: A compact element representing an input, attribute, or action, often used for filtering content or entering information.
+
+- **Progress Indicators**: Indicators showing an ongoing process with either determinate or indeterminate duration, including CircularProgressIndicator and LinearProgressIndicator.
+
+- **DatePicker**: A dialog or inline component that allows users to select a date from a calendar interface.
+
+- **Dialog**: A modal window that appears in front of app content to provide critical information or ask for a decision.
+
+- **Divider/Separator**: A thin line that groups content in lists and layouts, creating visual separation between items.
+
+- **Drawer**: A panel that slides in from the edge of the screen to show navigation options or other content.
+
+- **DropdownButton/Select**: A button that displays a menu when pressed, allowing users to select from a list of options.
+
+- **ExpansionPanel**: A container that can be expanded or collapsed to reveal or hide content.
+
+- **FloatingActionButton**: A circular button that represents the primary action of a screen, floating above the UI.
+
+- **IconButton**: A button that displays an icon without a text label, used for common actions.
+
+- **TextField**: An input component that allows users to enter and edit text, with various styling and validation options.
+
+- **ListTile**: A single fixed-height row that typically contains text and icons, used in lists and menus.
+
+- **Menu**: A temporary sheet of options that appears when a user interacts with a button or other control.
+
+- **Radio/RadioGroup**: A selection control that allows users to select one option from a set.
+
+- **Sheet**: A surface containing content that appears by sliding from an edge of the screen, including bottom sheets, side sheets, etc.
+
+- **Slider**: A control that lets users select a value from a continuous or discrete range by dragging a thumb.
+
+- **SnackBar**: A lightweight message that appears temporarily at the bottom of the screen to provide feedback.
+
+- **Switch**: A toggle control that changes the state of a single option between on and off.
+
+- **TabBar**: A horizontal row of tabs for navigating between different views or functional aspects of an app.
+
+- **DataTable**: A component for displaying data in rows and columns, with options for sorting, selecting, and pagination.
+
+- **TimePicker**: A dialog or inline component that allows users to select a specific time.
+
+- **Tooltip**: A small popup that displays informative text when users hover over, focus on, or tap an element.
+
+### Components Requiring External Packages
+
+These are already included in `pubspec.yaml`.
+
+1. **Calendar**
+You can add Calendar, Horizontal Calendar, Planner or Timetable to your Flutter app using external packages. Use `table_calendar`, a is a highly customizable, feature-packed calendar widget for Flutter.
+
+2. **Toast**
+Flutter apps can provide quick feedback about operations using Toasts or Notifications that appear in the middle of the lower half of the screen as small alerts with translucent backgrounds. For this functionality, you can use packages like `fluttertoast` which is a Toast Library for Flutter that lets you easily create toast messages in a single line of code.
 
 ## Configuration
 
@@ -136,17 +184,35 @@ ListView.builder(
 
 ## Design Customization
 
-**Tailor the site's look and feel based on the user's specific request.** This includes:
+**Tailor the site's look and feel based on the user's specific request.**
+
+This includes:
 
 - **Color schemes**: Incorporate the user's color preferences when specified, and choose an appropriate scheme that matches the application's purpose and aesthetic
-- **Typography**: Choose fonts that match the requested aesthetic (modern, elegant, playful, etc.)
 - **Layout**: Follow the requested structure (bottom navigation bar, drawer, grid, etc)
 - **Component styling**: Use appropriate border radius, shadows, and spacing for the desired feel
 - **Interactive elements**: Style buttons, forms, and hover states to match the theme
 
-### Using Fonts
+### Typography
 
-Use the `google_fonts` package.
+Use the `google_fonts` package. Choose fonts that match the requested aesthetic (modern, elegant, playful, etc.).
+
+Material 3 typography is accessible through the theme:
+
+```dart
+Text('Headline Large', style: Theme.of(context).textTheme.headlineLarge),
+Text('Headline Medium', style: Theme.of(context).textTheme.headlineMedium),
+Text('Headline Small', style: Theme.of(context).textTheme.headlineSmall),
+Text('Title Large', style: Theme.of(context).textTheme.titleLarge),
+Text('Title Medium', style: Theme.of(context).textTheme.titleMedium),
+Text('Title Small', style: Theme.of(context).textTheme.titleSmall),
+Text('Body Large', style: Theme.of(context).textTheme.bodyLarge),
+Text('Body Medium', style: Theme.of(context).textTheme.bodyMedium),
+Text('Body Small', style: Theme.of(context).textTheme.bodySmall),
+Text('Label Large', style: Theme.of(context).textTheme.labelLarge),
+Text('Label Medium', style: Theme.of(context).textTheme.labelMedium),
+Text('Label Small', style: Theme.of(context).textTheme.labelSmall),
+```
 
 ### Loading and displaying media
 
@@ -154,9 +220,11 @@ For images, use the available `cached_network_image` package.
 
 For viewing larger images with zoom, etc use the `easy_image_viewer` package.
 
-If the user requests video support, use the `chewie` package that must be installed.
+If the user requests video support, use the `chewie` package (not included, must be installed).
 
 ### Recommended Styles by Use Case
+
+If the user does not specify, **Modern/Clean** style is the default.
 
 - **Modern/Clean**: 
   - **Fonts**: Inter Variable, Outfit Variable, or Manrope
