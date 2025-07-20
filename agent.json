@@ -17,10 +17,6 @@
         "-y",
         "@nostrbook/mcp@latest"
       ]
-    },
-    "pubdev": {
-      "type": "stdio",
-      "command": "dart mcp/pubdev_mcp.dart"
     }
   }
 }

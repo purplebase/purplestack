@@ -28,7 +28,7 @@ Development stack designed for AI agents to build Nostr-enabled Flutter applicat
 
 ## MCP Servers
 
-There are several included MCP servers that you MUST use them appropriately: `developer` and `nostr` reference, as well as a `pubdev` server to look for suitable packages to install (if ever needed).
+There are included MCP servers that you MUST use them appropriately: `developer` and `nostr` reference.
 
 ## Project Structure
 
