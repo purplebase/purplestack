@@ -28,7 +28,37 @@ Development stack designed for AI agents to build Nostr-enabled Flutter applicat
 
 ## MCP Servers
 
-There are included MCP servers that you MUST use them appropriately: `developer` and `nostr` reference.
+There are included MCP servers that you MUST use them appropriately:
+
+### `developer` MCP Server
+
+The `developer` server provides development and debugging tools:
+- **File operations**: Reading, writing, editing files in the project
+- **Terminal commands**: Running development commands, build processes, testing
+- **Code analysis**: Searching code, analyzing structure, finding patterns
+- **Project management**: Understanding project layout and dependencies
+
+Use this server for:
+- Code generation and modification
+- Running tests and builds
+- Debugging issues
+- Project exploration and analysis
+
+### `nostr` MCP Server
+
+The `nostr` server provides Nostr protocol reference and documentation:
+- **NIP documentation**: Read specific NIPs using `mcp_nips_read_nip`
+- **Kind reference**: Look up event kinds with `mcp_nips_read_kind`
+- **Tag reference**: Understand tag usage with `mcp_nips_read_tag`
+- **Protocol basics**: Core concepts with `mcp_nips_read_protocol`
+- **Complete index**: Overview of all NIPs, kinds, and tags with `mcp_nips_read_nips_index`
+
+Use this server for:
+- Understanding Nostr protocol specifications
+- Finding appropriate event kinds for features
+- Learning tag usage patterns
+- Ensuring compliance with Nostr standards
+- Researching existing solutions before creating custom kinds
 
 ## Project Structure
 
@@ -260,13 +290,15 @@ The project includes a complete light/dark theme system. The theme can be contro
 
 ### Color Scheme Implementation
 
-When users specify color schemes do it via Forui "Theme Color"
-- Apply colors consistently across components (buttons, links, accents)
+When users specify color schemes, use Material 3's color system:
+- Use `colorSchemeSeed` to generate cohesive color schemes from a single color
+- Apply colors consistently across components (buttons, links, accents) using theme colors
 - Test both light and dark mode variants
 
 ### Component Styling Patterns
 
-- Follow Forui patterns for component variants
+- Follow Material 3 design patterns and component variants
+- Use theme-based styling: `Theme.of(context).colorScheme.primary`
 - Implement responsive design with breakpoints
 - Add hover and focus states for interactive elements
 
@@ -323,7 +355,7 @@ icons_launcher:
   - Local, intra-component state uses Flutter Hooks (use in `HookWidget` or `HookConsumerWidget` if it also reads providers)
   - Do not create simple wrappers around providers, i.e. wrapping one other provider without adding any value
 - Component-based architecture, with shared components in `lib/widgets`
-- Follows Forui component patterns
+- Follows Material 3 design system and component patterns
 - Keep widgets of small or medium size and focused
 - Use Dart constants for magic numbers and strings (`kConstant`)
 
@@ -363,9 +395,9 @@ This project uses the `models` and `purplebase` packages which are the ONLY way 
 
 ### Nostr Implementation Guidelines
 
-- Always use the `nostr__read_nips_index` tool before implementing any Nostr features to see what kinds are currently in use across all NIPs.
-- If any existing kind or NIP might offer the required functionality, use the `nostr__read_nip` tool to investigate thoroughly. Several NIPs may need to be read before making a decision.
-- Only generate new kind numbers with the `nostr__generate_kind` tool if no existing suitable kinds are found after comprehensive research.
+- Always use the `mcp_nips_read_nips_index` tool before implementing any Nostr features to see what kinds are currently in use across all NIPs.
+- If any existing kind or NIP might offer the required functionality, use the `mcp_nips_read_nip` tool to investigate thoroughly. Several NIPs may need to be read before making a decision.
+- Only generate new kind numbers if no existing suitable kinds are found after comprehensive research.
 
 Knowing when to create a new kind versus reusing an existing kind requires careful judgement. Introducing new kinds means the project won't be interoperable with existing clients. But deviating too far from the schema of a particular kind can cause different interoperability issues.
 
@@ -373,7 +405,7 @@ Knowing when to create a new kind versus reusing an existing kind requires caref
 
 When implementing features that could use existing NIPs, follow this decision framework:
 
-1. **Thorough NIP Review**: Before considering a new kind, always perform a comprehensive review of existing NIPs and their associated kinds. Use the `nostr__read_nips_index` tool to get an overview, and then `nostr__read_nip` and `nostr__read_kind` to investigate any potentially relevant NIPs or kinds in detail. The goal is to find the closest existing solution.
+1. **Thorough NIP Review**: Before considering a new kind, always perform a comprehensive review of existing NIPs and their associated kinds. Use the `mcp_nips_read_nips_index` tool to get an overview, and then `mcp_nips_read_nip` and `mcp_nips_read_kind` to investigate any potentially relevant NIPs or kinds in detail. The goal is to find the closest existing solution.
 
 2. **Prioritize Existing NIPs**: Always prefer extending or using existing NIPs over creating custom kinds, even if they require minor compromises in functionality.
 
@@ -391,7 +423,7 @@ When implementing features that could use existing NIPs, follow this decision fr
    - The data structure is fundamentally different from existing patterns
    - The use case requires different storage characteristics (regular vs replaceable vs addressable)
 
-6. **Custom Kind Publishing**: When publishing events with custom kinds generated by `nostr__generate_kind`, always include a NIP-31 "alt" tag with a human-readable description of the event's purpose.
+6. **Custom Kind Publishing**: When publishing events with custom kinds, always include a NIP-31 "alt" tag with a human-readable description of the event's purpose.
 
 **Example Decision Process**:
 ```

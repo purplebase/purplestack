@@ -32,7 +32,7 @@
   - Local, intra-component state uses Flutter Hooks (use in `HookWidget` or `HookConsumerWidget` if it also reads providers)
   - Do not create simple wrappers around providers, i.e. wrapping one other provider without adding any value
 - Component-based architecture, with shared components in `lib/widgets`
-- Follows Forui component patterns
+- Follows Material 3 design system and component patterns
 - Keep widgets of small or medium size and focused
 - Use Dart constants for magic numbers and strings (`kConstant`)
 

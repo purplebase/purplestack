@@ -28,7 +28,37 @@ Development stack designed for AI agents to build Nostr-enabled Flutter applicat
 
 ## MCP Servers
 
-There are included MCP servers that you MUST use them appropriately: `developer` and `nostr` reference.
+There are included MCP servers that you MUST use them appropriately:
+
+### `developer` MCP Server
+
+The `developer` server provides development and debugging tools:
+- **File operations**: Reading, writing, editing files in the project
+- **Terminal commands**: Running development commands, build processes, testing
+- **Code analysis**: Searching code, analyzing structure, finding patterns
+- **Project management**: Understanding project layout and dependencies
+
+Use this server for:
+- Code generation and modification
+- Running tests and builds
+- Debugging issues
+- Project exploration and analysis
+
+### `nostr` MCP Server
+
+The `nostr` server provides Nostr protocol reference and documentation:
+- **NIP documentation**: Read specific NIPs using `mcp_nips_read_nip`
+- **Kind reference**: Look up event kinds with `mcp_nips_read_kind`
+- **Tag reference**: Understand tag usage with `mcp_nips_read_tag`
+- **Protocol basics**: Core concepts with `mcp_nips_read_protocol`
+- **Complete index**: Overview of all NIPs, kinds, and tags with `mcp_nips_read_nips_index`
+
+Use this server for:
+- Understanding Nostr protocol specifications
+- Finding appropriate event kinds for features
+- Learning tag usage patterns
+- Ensuring compliance with Nostr standards
+- Researching existing solutions before creating custom kinds
 
 ## Project Structure
 
@@ -260,13 +290,15 @@ The project includes a complete light/dark theme system. The theme can be contro
 
 ### Color Scheme Implementation
 
-When users specify color schemes do it via Forui "Theme Color"
-- Apply colors consistently across components (buttons, links, accents)
+When users specify color schemes, use Material 3's color system:
+- Use `colorSchemeSeed` to generate cohesive color schemes from a single color
+- Apply colors consistently across components (buttons, links, accents) using theme colors
 - Test both light and dark mode variants
 
 ### Component Styling Patterns
 
-- Follow Forui patterns for component variants
+- Follow Material 3 design patterns and component variants
+- Use theme-based styling: `Theme.of(context).colorScheme.primary`
 - Implement responsive design with breakpoints
 - Add hover and focus states for interactive elements
 
