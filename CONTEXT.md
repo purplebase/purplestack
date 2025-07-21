@@ -166,6 +166,8 @@ The project uses a GoRouter with a centralized routing configuration in `router.
 1. Create your screen in `screens`
 2. Import it in `router.dart`
 
+**Multi-Screen Navigation**: For any multi-screen application request, automatically implement a `BottomNavigationBar` with appropriate tabs and navigation structure. This provides intuitive navigation patterns that users expect on mobile platforms.
+
 ## Loading States
 
 **Use skeleton loading** for structured content (feeds, profiles, forms). **Use spinners** only for buttons or short operations.
@@ -716,9 +718,98 @@ final models = await ref.storage.query(
 
 ### Uploading Files on Nostr
 
-TODO: Blossom interface in models, impl in purplebase (take from zapstore-cli)
+Use the Blossom protocol (https://github.com/hzrd149/blossom) to interact with file servers based on file hashes. The `models` package includes support for Blossom authorization events.
+
+**Basic File Upload Flow:**
+
+```dart
+import 'dart:io';
+import 'package:crypto/crypto.dart';
+import 'package:http/http.dart' as http;
+import 'package:mime/mime.dart';
+import 'package:path/path.dart' as path;
+
+// 1. Calculate file hash and prepare authorization
+final file = File(originalFilePath);
+final bytes = await file.readAsBytes();
+final assetHash = sha256.convert(bytes).toString();
+final mimeType = lookupMimeType(originalFilePath);
+
+// 2. Create Blossom authorization event
+final partialAuthorization = PartialBlossomAuthorization()
+  ..content = 'Upload asset $originalFilePath'
+  ..type = BlossomAuthorizationType.upload
+  ..mimeType = mimeType
+  ..expiration = DateTime.now().add(Duration(hours: 1))
+  ..hash = assetHash;
+
+final authorization = await partialAuthorization.signWith(signer);
+
+// 3. Check if file already exists on server
+final assetUploadUrl = '$server/$assetHash';
+final headResponse = await http.head(Uri.parse(assetUploadUrl));
+
+if (headResponse.statusCode == 200) {
+  // File already exists, use existing URL
+  print('File already exists at: $assetUploadUrl');
+} else {
+  // 4. Upload file to Blossom server
+  final response = await http.put(
+    Uri.parse(path.join(server.toString(), 'upload')),
+    body: bytes,
+    headers: {
+      if (authorization.mimeType != null)
+        'Content-Type': authorization.mimeType!,
+      'Authorization': 'Nostr ${authorization.toBase64()}',
+    },
+  );
+
+  if (response.statusCode == 200) {
+    print('File uploaded successfully to: $assetUploadUrl');
+  } else {
+    throw Exception('Upload failed: ${response.statusCode} ${response.body}');
+  }
+}
+```
+
+**File Deletion:**
+
+```dart
+// Create deletion authorization
+final deleteAuth = PartialBlossomAuthorization()
+  ..content = 'Delete asset $assetHash'
+  ..type = BlossomAuthorizationType.delete
+  ..expiration = DateTime.now().add(Duration(hours: 1))
+  ..hash = assetHash;
+
+final signedDeleteAuth = await deleteAuth.signWith(signer);
+
+// Delete from server
+final deleteResponse = await http.delete(
+  Uri.parse('$server/$assetHash'),
+  headers: {
+    'Authorization': 'Nostr ${signedDeleteAuth.toBase64()}',
+  },
+);
+```
+
+**Attaching Files to Events:**
 
 To attach files to kind 1 events, each file's URL should be appended to the event's `content`, and an `imeta` tag should be added for each file. For kind 0 events, the URL by itself can be used in relevant fields of the JSON content.
+
+```dart
+// After uploading via Blossom, attach to note
+final noteContent = 'Check out this image! $assetUploadUrl';
+final note = PartialNote(noteContent)
+  ..addTag('imeta', [
+    'url $assetUploadUrl',
+    if (mimeType != null) 'm $mimeType',
+    'x $assetHash',
+  ]);
+
+final signedNote = await note.signWith(signer);
+await ref.storage.publish({signedNote});
+```
 
 ### Nostr Encryption and Decryption
 
