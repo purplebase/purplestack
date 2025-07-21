@@ -89,6 +89,7 @@ class NoteParser {
   /// [onHttpUrl] - Optional callback for replacing HTTP URLs
   /// [onMediaUrl] - Optional callback specifically for media URLs (images, videos, etc.)
   /// [onHashtag] - Optional callback for replacing hashtags (#hashtag)
+  /// [onHashtagTap] - Optional callback for when a hashtag is tapped
   /// [onProfileTap] - Optional callback for when a profile is tapped
   /// [textStyle] - Default text style for regular text
   /// [linkStyle] - Text style for unhandled links (when callback returns null)
@@ -99,6 +100,7 @@ class NoteParser {
     Widget? Function(String httpUrl)? onHttpUrl,
     Widget? Function(String mediaUrl)? onMediaUrl,
     Widget? Function(String hashtag)? onHashtag,
+    void Function(String hashtag)? onHashtagTap,
     void Function(String pubkey)? onProfileTap,
     TextStyle? textStyle,
     TextStyle? linkStyle,
@@ -185,7 +187,18 @@ class NoteParser {
           replacement = onHttpUrl?.call(match.text);
           break;
         case _EntityType.hashtag:
-          replacement = onHashtag?.call(match.cleanEntity);
+          replacement =
+              onHashtag?.call(match.cleanEntity) ??
+              HashtagWidget(
+                hashtag: match.cleanEntity,
+                colorPair: [
+                  Theme.of(context).colorScheme.primary,
+                  Theme.of(context).colorScheme.primaryContainer,
+                ],
+                onTap: onHashtagTap != null
+                    ? () => onHashtagTap(match.cleanEntity)
+                    : null,
+              );
           break;
       }
 
@@ -326,12 +339,14 @@ class NostrEntityWidget extends StatelessWidget {
   final String entity;
   final List<Color> colorPair;
   final void Function(String pubkey)? onProfileTap;
+  final void Function(String hashtag)? onHashtagTap;
 
   const NostrEntityWidget({
     super.key,
     required this.entity,
     required this.colorPair,
     this.onProfileTap,
+    this.onHashtagTap,
   });
 
   @override
@@ -349,6 +364,7 @@ class NostrEntityWidget extends StatelessWidget {
           eventData: decoded,
           colorPair: colorPair,
           onProfileTap: onProfileTap,
+          onHashtagTap: onHashtagTap,
         ),
         AddressData() => AddressEntityWidget(
           addressData: decoded,
@@ -411,12 +427,14 @@ class EventEntityWidget extends ConsumerWidget {
   final EventData eventData;
   final List<Color> colorPair;
   final void Function(String pubkey)? onProfileTap;
+  final void Function(String hashtag)? onHashtagTap;
 
   const EventEntityWidget({
     super.key,
     required this.eventData,
     required this.colorPair,
     this.onProfileTap,
+    this.onHashtagTap,
   });
 
   @override
@@ -522,7 +540,12 @@ class EventEntityWidget extends ConsumerWidget {
               ),
             ),
             const SizedBox(height: 8.0),
-            ParsedContentWidget(content: note.content, colorPair: colorPair),
+            ParsedContentWidget(
+              content: note.content,
+              colorPair: colorPair,
+              onProfileTap: onProfileTap,
+              onHashtagTap: onHashtagTap,
+            ),
           ],
         ),
       ),
@@ -601,12 +624,14 @@ class ParsedContentWidget extends StatelessWidget {
   final String content;
   final List<Color> colorPair;
   final void Function(String pubkey)? onProfileTap;
+  final void Function(String hashtag)? onHashtagTap;
 
   const ParsedContentWidget({
     super.key,
     required this.content,
     required this.colorPair,
     this.onProfileTap,
+    this.onHashtagTap,
   });
 
   @override
@@ -633,11 +658,11 @@ class ParsedContentWidget extends StatelessWidget {
         entity: entity,
         colorPair: colorPair,
         onProfileTap: onProfileTap,
+        onHashtagTap: onHashtagTap,
       ),
       onHttpUrl: (url) => UrlChipWidget(url: url, colorPair: colorPair),
       onMediaUrl: (url) => MediaWidget(url: url, colorPair: colorPair),
-      onHashtag: (hashtag) =>
-          HashtagWidget(hashtag: hashtag, colorPair: colorPair),
+      onHashtagTap: onHashtagTap,
       onProfileTap: onProfileTap,
     );
   }
@@ -1176,20 +1201,19 @@ class _AudioPlayerWidgetState extends State<AudioPlayerWidget> {
 class HashtagWidget extends StatelessWidget {
   final String hashtag;
   final List<Color> colorPair;
+  final VoidCallback? onTap;
 
   const HashtagWidget({
     super.key,
     required this.hashtag,
     required this.colorPair,
+    this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onTap: () {
-        // Handle hashtag tap - could navigate to hashtag feed or trigger search
-        // For now, we'll just do nothing but provide a tap target
-      },
+      onTap: onTap,
       child: Container(
         decoration: BoxDecoration(
           color: colorPair[0].withValues(alpha: 0.1),

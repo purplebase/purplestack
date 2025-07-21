@@ -1083,52 +1083,55 @@ For nostr-related utilities always look first in the `models` or `purplebase` pa
 
 **⚠️ Important**: `NoteParser` is a generic component in `/common/`. Never modify it with app-specific behavior - use its callback system for customization. See the **Common Widget Architecture** section in Code Guidelines.
 
-Use `NoteParser.parse()` to automatically detect and render NIP-19 entities, media URLs, and links in note content:
+**Use for all Nostr note content parsing** to automatically handle NIP-19 entities, URLs, media, and hashtags:
 
 ```dart
 import 'package:purplestack/widgets/common/note_parser.dart';
 
-// ALWAYS use this instead of Text(note.content)
-NoteParser.parse(
-  context,
-  note.content,
-  textStyle: Theme.of(context).textTheme.bodyMedium,
-  linkStyle: Theme.of(context).textTheme.bodyMedium?.copyWith(
-    color: Theme.of(context).colorScheme.primary,
-    decoration: TextDecoration.underline,
-  ),
+// ✅ Always use ParsedContentWidget for note content display
+ParsedContentWidget(
+  content: note.content,
+  colorPair: [Colors.blue, Colors.blueAccent],
+  onProfileTap: (pubkey) => context.push('/profile/$pubkey'),
+  onHashtagTap: (hashtag) => context.push('/hashtag/$hashtag'),
 )
 
-// With custom widget replacements
+// ✅ Or use NoteParser.parse() directly with custom callbacks
 NoteParser.parse(
   context,
   note.content,
   textStyle: Theme.of(context).textTheme.bodyMedium,
-  onNostrEntity: (entity) {
-    // Replace npub1..., note1..., nevent1... with custom widgets
-    final decoded = Utils.decodeShareableIdentifier(entity);
-    return switch (decoded) {
-      ProfileData() => ProfileChip(pubkey: decoded.pubkey),
-      EventData() => NotePreview(eventId: decoded.eventId),
-      _ => null, // Falls back to styled text
-    };
-  },
-  onMediaUrl: (url) => CachedNetworkImage(
-    imageUrl: url, 
-    height: 200,
-    errorBuilder: (context, error, stackTrace) => Container(
-      height: 200,
-      color: Colors.grey[300],
-      child: Icon(Icons.broken_image, color: Colors.grey[600]),
-    ),
-  ),
-  onHttpUrl: (url) => LinkChip(url: url),
+  onNostrEntity: (entity) => NostrEntityWidget(entity: entity, colorPair: colorPair),
+  onHttpUrl: (url) => UrlChipWidget(url: url, colorPair: colorPair),
+  onMediaUrl: (url) => MediaWidget(url: url, colorPair: colorPair),
+  onHashtag: (hashtag) => HashtagWidget(hashtag: hashtag, colorPair: colorPair),
+  onHashtagTap: (hashtag) => context.push('/hashtag/$hashtag'),
+  onProfileTap: (pubkey) => context.push('/profile/$pubkey'),
 )
 ```
+
+**Supported Content Types:**
+- **NIP-19 Entities**: `npub1...`, `note1...`, `nevent1...`, `naddr1...` → Profile chips, note previews
+- **HTTP URLs**: `https://example.com` → Link previews with `any_link_preview`
+- **Media URLs**: `image.jpg`, `video.mp4`, `audio.mp3` → Embedded media players
+- **Hashtags**: `#bitcoin`, `#nostr` → Styled hashtag chips with navigation
+
+**When to use NoteParser:**
+- Kind 1 notes (short text notes)
+- Kind 11 notes (group chat messages)
+- Kind 1111 notes (comments)
+- Profile descriptions (bio text)
+- Any Nostr content with mixed text and entities
+
+**When NOT to use:**
+- Kind 30023 articles (use `flutter_markdown` instead)
+- Pure plaintext without entities
+- Content where Markdown formatting is expected
 
 **Features:**
 - Automatically detects `npub1...`, `note1...`, `nevent1...`, etc. (handles `nostr:` prefix)
 - Identifies media URLs by file extension (jpg, png, mp4, etc.)
+- Detects hashtags in `#hashtag` format with navigation support
 - Returns `RichText` with `WidgetSpan` for seamless text/widget mixing
 - Validates NIP-19 entities using `Utils.decodeShareableIdentifier()`
 - Graceful fallbacks when callbacks return `null`
