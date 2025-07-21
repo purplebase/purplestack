@@ -444,8 +444,23 @@ class EventEntityWidget extends ConsumerWidget {
       );
     }
 
-    return Card(
+    return Container(
       margin: const EdgeInsets.symmetric(vertical: 8.0),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surfaceContainerLowest,
+        borderRadius: BorderRadius.circular(12.0),
+        border: Border.all(
+          color: colorPair[0].withValues(alpha: 0.2),
+          width: 1.0,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: colorPair[0].withValues(alpha: 0.05),
+            blurRadius: 4.0,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
       child: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
