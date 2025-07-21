@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:models/models.dart';
-import 'package:purplestack/utils/time_utils.dart';
+import 'package:purplestack/widgets/common/time_utils.dart';
 import 'package:purplestack/widgets/common/profile_avatar.dart';
 import 'package:any_link_preview/any_link_preview.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -360,7 +360,11 @@ class EventEntityWidget extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final noteState = ref.watch(
-      query<Note>(ids: {eventData.eventId}, limit: 1),
+      query<Note>(
+        ids: {eventData.eventId},
+        limit: 1,
+        and: (note) => {note.author},
+      ),
     );
 
     final note = noteState.models.firstOrNull;
@@ -415,8 +419,8 @@ class EventEntityWidget extends ConsumerWidget {
                     ),
                   ),
                 ),
-                Text(
-                  TimeUtils.formatTimestamp(note.createdAt),
+                TimeAgoText(
+                  note.createdAt,
                   style: Theme.of(
                     context,
                   ).textTheme.bodySmall!.copyWith(fontSize: 11),

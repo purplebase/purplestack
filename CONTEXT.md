@@ -609,11 +609,15 @@ Assertions/expects in tests should be as detailed as possible, that is, do not s
 
 **Always check for existing utilities before creating new ones.** The project includes several utility classes that should be used consistently:
 
-- **TimeUtils.formatTimestamp()**: Use this for all timestamp formatting instead of creating custom time formatting logic
+- **TimeUtils & TimeAgoText**: Use for all timestamp formatting with both static and reactive options
 - **Utils (from models package)**: Use for all Nostr-related utilities (key generation, encoding/decoding, etc.)
 - **NoteParser**: REQUIRED for displaying any note content - never display raw note text
 
-Example:
+**Time Formatting Guidelines:**
+- Use `TimeAgoText` for timestamps that need to auto-update (feeds, chats, live content)
+- Use `TimeUtils.formatTimestamp()` for static displays that don't need updates
+
+Examples:
 ```dart
 // ❌ Don't recreate time formatting
 String _formatTime(DateTime dateTime) {
@@ -623,14 +627,16 @@ String _formatTime(DateTime dateTime) {
   // ... more custom logic
 }
 
-// ✅ Use existing utility
-import 'package:purplestack/utils/time_utils.dart';
+// ✅ Use reactive widget for auto-updating displays
+import 'package:purplestack/widgets/common/time_utils.dart';
+TimeAgoText(
+  note.createdAt,
+  style: Theme.of(context).textTheme.bodySmall,
+)
+
+// ✅ Use static utility for non-updating displays
 Text(TimeUtils.formatTimestamp(note.createdAt))
 ```
-
-### Accessibility
-
-- Use appropriate contrast ratios
 
 
 ## Nostr Protocol Integration
