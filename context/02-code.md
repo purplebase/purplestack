@@ -61,6 +61,29 @@ Assertions/expects in tests should be as detailed as possible, that is, do not s
 - Implement proper error handling
 - Consider lazy loading for large lists
 
+### Utility Functions
+
+**Always check for existing utilities before creating new ones.** The project includes several utility classes that should be used consistently:
+
+- **TimeUtils.formatTimestamp()**: Use this for all timestamp formatting instead of creating custom time formatting logic
+- **Utils (from models package)**: Use for all Nostr-related utilities (key generation, encoding/decoding, etc.)
+- **NoteParser**: REQUIRED for displaying any note content - never display raw note text
+
+Example:
+```dart
+// ❌ Don't recreate time formatting
+String _formatTime(DateTime dateTime) {
+  final now = DateTime.now();
+  final difference = now.difference(dateTime);
+  if (difference.inMinutes < 1) return 'now';
+  // ... more custom logic
+}
+
+// ✅ Use existing utility
+import 'package:purplestack/utils/time_utils.dart';
+Text(TimeUtils.formatTimestamp(note.createdAt))
+```
+
 ### Accessibility
 
 - Use appropriate contrast ratios

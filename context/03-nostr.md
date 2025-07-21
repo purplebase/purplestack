@@ -272,25 +272,30 @@ Always use valid pubkeys, `Utils.generate64Hex()` and other utils allow you to g
 
 For nostr-related utilities always look first in the `models` or `purplebase` packages, where they are likely available, before creating your own.
 
-### Rendering entities in notes
+### Rendering Note Content
 
 Use `NoteParser.parse()` to automatically detect and render NIP-19 entities, media URLs, and links in note content:
 
 ```dart
-import 'package:purplestack/utils/utils.dart';
+import 'package:purplestack/widgets/common/note_parser.dart';
 
-// Basic usage with styling
+// ALWAYS use this instead of Text(note.content)
 NoteParser.parse(
+  context,
   note.content,
-  textStyle: const TextStyle(fontSize: 16, color: Colors.black87),
-  linkStyle: const TextStyle(color: Colors.blue, decoration: TextDecoration.underline),
+  textStyle: Theme.of(context).textTheme.bodyMedium,
+  linkStyle: Theme.of(context).textTheme.bodyMedium?.copyWith(
+    color: Theme.of(context).colorScheme.primary,
+    decoration: TextDecoration.underline,
+  ),
 )
 
 // With custom widget replacements
 NoteParser.parse(
+  context,
   note.content,
-  textStyle: const TextStyle(fontSize: 16),
-  onNip19Entity: (entity) {
+  textStyle: Theme.of(context).textTheme.bodyMedium,
+  onNostrEntity: (entity) {
     // Replace npub1..., note1..., nevent1... with custom widgets
     final decoded = Utils.decodeShareableIdentifier(entity);
     return switch (decoded) {
@@ -299,7 +304,15 @@ NoteParser.parse(
       _ => null, // Falls back to styled text
     };
   },
-  onMediaUrl: (url) => CachedNetworkImage(imageUrl: url, height: 200),
+  onMediaUrl: (url) => CachedNetworkImage(
+    imageUrl: url, 
+    height: 200,
+    errorBuilder: (context, error, stackTrace) => Container(
+      height: 200,
+      color: Colors.grey[300],
+      child: Icon(Icons.broken_image, color: Colors.grey[600]),
+    ),
+  ),
   onHttpUrl: (url) => LinkChip(url: url),
 )
 ```
@@ -310,6 +323,8 @@ NoteParser.parse(
 - Returns `RichText` with `WidgetSpan` for seamless text/widget mixing
 - Validates NIP-19 entities using `Utils.decodeShareableIdentifier()`
 - Graceful fallbacks when callbacks return `null`
+
+**Important**: Any time you display note content (kind 1, kind 11, kind 1111), you MUST use this instead of displaying raw text.
 
 #### Use in Filters
 

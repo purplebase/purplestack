@@ -234,7 +234,32 @@ Text('Label Small', style: Theme.of(context).textTheme.labelSmall),
 
 ### Loading and displaying media
 
-For images, use the available `cached_network_image` package.
+For images, use the available `cached_network_image` package **with proper error handling**:
+
+```dart
+// ✅ Always include errorBuilder to prevent crashes on failed image loads
+CachedNetworkImage(
+  imageUrl: imageUrl,
+  errorBuilder: (context, error, stackTrace) => Container(
+    width: 40,
+    height: 40,
+    color: Colors.grey[300],
+    child: Icon(Icons.broken_image, color: Colors.grey[600]),
+  ),
+  placeholder: (context, url) => CircularProgressIndicator(),
+)
+
+// For profile avatars
+CircleAvatar(
+  backgroundImage: author?.pictureUrl != null
+      ? CachedNetworkImageProvider(
+          author!.pictureUrl!,
+          errorListener: (error) => debugPrint('Image failed to load: $error'),
+        )
+      : null,
+  child: author?.pictureUrl == null ? Icon(Icons.person) : null,
+)
+```
 
 For viewing larger images with zoom, etc use the `easy_image_viewer` package.
 
