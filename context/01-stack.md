@@ -14,6 +14,7 @@ Development stack designed for AI agents to build Nostr-enabled Flutter applicat
 - **Flutter Hooks**: React-style hooks for Flutter
 - **models**: Domain models for Nostr events
 - **Purplebase**: Local-first Nostr SDK with storage and relay pool, implementation of the `models` package interface
+- **amber_signer**: NIP-55 Android signer integration
 - **GoRouter**: Declarative routing
 - **google_fonts**: Font management
 - **fluttertoast**: Toast components
@@ -24,6 +25,15 @@ Development stack designed for AI agents to build Nostr-enabled Flutter applicat
 - **percent_indicator**: Progress indicators
 - **easy_image_viewer**: Image viewing
 - **flutter_layout_grid**: Grid layouts
+- **table_calendar**: Highly customizable, feature-packed calendar widget
+- **dart_emoji**: Emoji support and parsing
+- **any_link_preview**: Link preview generation
+- **async_button_builder**: Async button states and interactions
+- **path_provider**: Platform-specific directory paths
+- **sqlite3_flutter_libs**: SQLite3 support for Flutter
+- **http**: HTTP client for API requests
+- **url_launcher**: Launch URLs in external applications
+- **path**: Cross-platform path manipulation
 
 **Important**: Flutter can produce binaries for a myriad of operating systems. **Assume the user wants an Android application (arm64-v8a), unless specifically asked otherwise**, take this into account when testing a build or launching a simulator.
 
@@ -153,6 +163,205 @@ You can add Calendar, Horizontal Calendar, Planner or Timetable to your Flutter 
 
 2. **Toast**
 Flutter apps can provide quick feedback about operations using Toasts or Notifications that appear in the middle of the lower half of the screen as small alerts with translucent backgrounds. For this functionality, you can use packages like `fluttertoast` which is a Toast Library for Flutter that lets you easily create toast messages in a single line of code.
+
+## Package Usage Guidelines
+
+### Content Rendering
+
+#### flutter_markdown
+**Use ONLY for long-form content** where Markdown is explicitly allowed or expected:
+
+```dart
+// ✅ Correct: Articles, long-form content (kind 30023)
+import 'package:flutter_markdown/flutter_markdown.dart';
+
+// For Articles and other long-form content
+Markdown(
+  data: article.content,
+  styleSheet: MarkdownStyleSheet(
+    h1: Theme.of(context).textTheme.headlineLarge,
+    h2: Theme.of(context).textTheme.headlineMedium,
+    p: Theme.of(context).textTheme.bodyMedium,
+  ),
+)
+
+// ❌ Wrong: Never use for kind 1 notes (short text notes)
+// Kind 1 notes should use NoteParser.parse() instead
+```
+
+**When to use flutter_markdown:**
+- Kind 30023 (Articles)
+- Custom kinds where Markdown is part of the specification
+- Tags explicitly documented to contain Markdown
+- Long-form content display screens
+
+**When NOT to use:**
+- Kind 1 notes (use `NoteParser.parse()` instead)
+- Profile descriptions (unless NIP specifies Markdown support)
+- Any content where Markdown isn't explicitly part of the protocol
+
+#### any_link_preview
+Already implemented in `NoteParser`, but useful for standalone hyperlink rendering:
+
+```dart
+import 'package:any_link_preview/any_link_preview.dart';
+
+// For standalone link previews outside of note content
+AnyLinkPreview(
+  link: url,
+  displayDirection: UIDirection.uiDirectionHorizontal,
+  showMultimedia: true,
+  bodyMaxLines: 2,
+  titleStyle: Theme.of(context).textTheme.bodyMedium!.copyWith(fontWeight: FontWeight.w600),
+  backgroundColor: Theme.of(context).colorScheme.surface,
+  borderRadius: 8.0,
+  onTap: () => launchUrl(Uri.parse(url)),
+)
+```
+
+### Layout and Responsiveness
+
+#### flutter_layout_grid
+**Use for complex UIs** where a grid layout is justified:
+
+```dart
+import 'package:flutter_layout_grid/flutter_layout_grid.dart';
+
+// ✅ Good: Complex layouts with multiple columns and varied sizing
+LayoutGrid(
+  columnSizes: [1.fr, 2.fr, 1.fr],
+  rowSizes: [auto, 1.fr, auto],
+  columnGap: 16,
+  rowGap: 16,
+  children: [
+    GridPlacement(
+      areaName: 'header',
+      child: HeaderWidget(),
+    ),
+    GridPlacement(
+      columnStart: 1,
+      columnSpan: 2,
+      child: ContentWidget(),
+    ),
+    GridPlacement(
+      areaName: 'sidebar',
+      child: SidebarWidget(),
+    ),
+  ],
+)
+
+// ❌ Avoid: Simple lists or basic layouts (use Column/Row instead)
+```
+
+**When to use flutter_layout_grid:**
+- Dashboard layouts with multiple panels
+- Complex responsive designs
+- Layouts requiring specific column/row spanning
+- When CSS Grid-like behavior is needed
+
+#### auto_size_text
+**Use for long labels** that don't fit in available space as an **alternative to ellipsis**:
+
+```dart
+import 'package:auto_size_text/auto_size_text.dart';
+
+// ✅ Good: Dynamic text sizing for constrained spaces
+AutoSizeText(
+  user.displayName ?? 'Unknown User',
+  style: Theme.of(context).textTheme.titleMedium,
+  maxLines: 1,
+  minFontSize: 12,
+  maxFontSize: 16,
+  overflow: TextOverflow.ellipsis, // Fallback if text still doesn't fit
+)
+
+// ✅ Good: Responsive text in cards or constrained containers
+Container(
+  width: 120,
+  child: AutoSizeText(
+    longTitle,
+    style: Theme.of(context).textTheme.bodyLarge,
+    maxLines: 2,
+    textAlign: TextAlign.center,
+  ),
+)
+
+// ❌ Avoid: Use regular Text widget when space is not constrained
+```
+
+**When to use auto_size_text:**
+- User-generated content with varying lengths
+- Responsive cards or tiles with dynamic content
+- Navigation labels that might overflow
+- Any UI where text length is unpredictable and space is limited
+
+### Progress and File Operations
+
+#### percent_indicator
+**Perfect for uploads/downloads** and file transfer operations, especially with **Blossom implementation**:
+
+```dart
+import 'package:percent_indicator/percent_indicator.dart';
+
+// ✅ Excellent: File upload progress with Blossom
+StreamBuilder<double>(
+  stream: uploadProgressStream,
+  builder: (context, snapshot) {
+    final progress = snapshot.data ?? 0.0;
+    return LinearPercentIndicator(
+      width: 200,
+      lineHeight: 6.0,
+      percent: progress,
+      backgroundColor: Colors.grey[300],
+      progressColor: Theme.of(context).colorScheme.primary,
+      trailing: Text('${(progress * 100).toInt()}%'),
+    );
+  },
+)
+
+// ✅ Good: Circular progress for file operations
+CircularPercentIndicator(
+  radius: 30.0,
+  lineWidth: 4.0,
+  percent: downloadProgress,
+  center: Icon(Icons.download),
+  progressColor: Theme.of(context).colorScheme.primary,
+  backgroundColor: Colors.grey[300],
+)
+
+// Example: Blossom file upload with progress
+Future<void> uploadWithProgress(File file) async {
+  final streamController = StreamController<double>();
+  
+  try {
+    // Calculate file hash and create authorization
+    final bytes = await file.readAsBytes();
+    final assetHash = sha256.convert(bytes).toString();
+    
+    // Upload with progress tracking
+    final response = await http.put(
+      uploadUri,
+      body: bytes,
+      headers: headers,
+    );
+    
+    // Update progress
+    streamController.add(1.0); // Complete
+    
+  } catch (e) {
+    streamController.addError(e);
+  } finally {
+    streamController.close();
+  }
+}
+```
+
+**When to use percent_indicator:**
+- File upload/download progress (especially with Blossom)
+- Media processing operations
+- Sync operations with relays
+- Any long-running operation with measurable progress
+- Loading states where progress percentage is available
 
 ## Configuration
 
