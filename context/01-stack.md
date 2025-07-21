@@ -166,6 +166,8 @@ The project uses a GoRouter with a centralized routing configuration in `router.
 1. Create your screen in `screens`
 2. Import it in `router.dart`
 
+**Multi-Screen Navigation**: For any multi-screen application request, automatically implement a `BottomNavigationBar` with appropriate tabs and navigation structure. This provides intuitive navigation patterns that users expect on mobile platforms.
+
 ## Loading States
 
 **Use skeleton loading** for structured content (feeds, profiles, forms). **Use spinners** only for buttons or short operations.
