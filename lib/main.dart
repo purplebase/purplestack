@@ -7,6 +7,7 @@ import 'package:path/path.dart' as path;
 import 'package:path_provider/path_provider.dart';
 import 'package:purplebase/purplebase.dart';
 import 'package:purplestack/router.dart';
+import 'package:purplestack/theme.dart';
 
 void main() {
   runZonedGuarded(() {
@@ -35,17 +36,18 @@ class PurplestackApp extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final title = 'Purplestack';
+    final theme = ref.watch(themeProvider);
 
     return switch (ref.watch(appInitializationProvider)) {
       AsyncLoading() => MaterialApp(
         title: title,
-        theme: ThemeData(useMaterial3: true),
+        theme: theme,
         home: Scaffold(body: Center(child: CircularProgressIndicator())),
         debugShowCheckedModeBanner: false,
       ),
       AsyncError(:final error) => MaterialApp(
         title: title,
-        theme: ThemeData(useMaterial3: true),
+        theme: theme,
         home: Scaffold(
           body: Center(
             child: Column(
@@ -71,7 +73,7 @@ class PurplestackApp extends ConsumerWidget {
       ),
       _ => MaterialApp.router(
         title: title,
-        theme: ThemeData(useMaterial3: true),
+        theme: theme,
         routerConfig: ref.watch(routerProvider),
         debugShowCheckedModeBanner: false,
         builder: (_, child) => child!,
@@ -85,7 +87,31 @@ class PurplestackHome extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(body: Center(child: Text('Purplestack demo app')));
+    return Scaffold(
+      body: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.rocket_launch,
+              size: 64,
+              color: Theme.of(context).colorScheme.primary,
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'Purplestack',
+              style: Theme.of(context).textTheme.headlineMedium,
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Nostr-enabled Flutter development stack',
+              style: Theme.of(context).textTheme.bodyLarge,
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }
 
