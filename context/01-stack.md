@@ -34,6 +34,8 @@ Development stack designed for AI agents to build Nostr-enabled Flutter applicat
 - **http**: HTTP client for API requests
 - **url_launcher**: Launch URLs in external applications
 - **path**: Cross-platform path manipulation
+- **chewie**: Professional video player with built-in controls
+- **just_audio**: High-quality audio player with advanced features
 
 **Important**: Flutter can produce binaries for a myriad of operating systems. **Assume the user wants an Android application (arm64-v8a), unless specifically asked otherwise**, take this into account when testing a build or launching a simulator.
 
@@ -474,7 +476,7 @@ CircleAvatar(
 
 For viewing larger images with zoom, etc use the `easy_image_viewer` package.
 
-If the user requests video support, use the `chewie` package (not included, must be installed).
+For video playback, use the `chewie` package. For audio playback, use the `just_audio` package.
 
 ### Recommended Styles by Use Case
 

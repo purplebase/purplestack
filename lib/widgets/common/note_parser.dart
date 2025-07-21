@@ -6,7 +6,9 @@ import 'package:purplestack/widgets/common/profile_avatar.dart';
 import 'package:any_link_preview/any_link_preview.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:chewie/chewie.dart';
 import 'package:video_player/video_player.dart';
+import 'package:just_audio/just_audio.dart';
 
 /// Enum for different media types
 enum MediaType { image, video, audio, none }
@@ -720,25 +722,7 @@ class MediaWidget extends StatelessWidget {
   }
 
   Widget _buildAudioWidget(BuildContext context) {
-    // For now, show a placeholder for audio files
-    // TODO: Implement audio player when needed
-    return Container(
-      height: 60,
-      color: colorPair[0].withValues(alpha: 0.1),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(Icons.audiotrack, color: colorPair[0]),
-          const SizedBox(width: 8.0),
-          Text(
-            'Audio file',
-            style: Theme.of(
-              context,
-            ).textTheme.bodySmall!.copyWith(color: colorPair[0]),
-          ),
-        ],
-      ),
-    );
+    return AudioPlayerWidget(url: url, colorPair: colorPair);
   }
 
   Widget _buildUnsupportedWidget(BuildContext context) {
@@ -777,26 +761,62 @@ class VideoPlayerWidget extends StatefulWidget {
 }
 
 class _VideoPlayerWidgetState extends State<VideoPlayerWidget> {
-  late VideoPlayerController _controller;
-  bool _isInitialized = false;
+  VideoPlayerController? _videoPlayerController;
+  ChewieController? _chewieController;
   bool _hasError = false;
   String _errorMessage = '';
 
   @override
   void initState() {
     super.initState();
-    _initializeVideo();
+    _initializePlayer();
   }
 
-  Future<void> _initializeVideo() async {
+  Future<void> _initializePlayer() async {
     try {
-      _controller = VideoPlayerController.networkUrl(Uri.parse(widget.url));
-      await _controller.initialize();
+      _videoPlayerController = VideoPlayerController.networkUrl(
+        Uri.parse(widget.url),
+      );
+      await _videoPlayerController!.initialize();
 
       if (mounted) {
-        setState(() {
-          _isInitialized = true;
-        });
+        _chewieController = ChewieController(
+          videoPlayerController: _videoPlayerController!,
+          autoPlay: false,
+          looping: false,
+          showControls: true,
+          materialProgressColors: ChewieProgressColors(
+            playedColor: widget.colorPair[0],
+            handleColor: widget.colorPair[0],
+            backgroundColor: Colors.grey,
+            bufferedColor: widget.colorPair[0].withValues(alpha: 0.3),
+          ),
+          placeholder: Container(
+            color: widget.colorPair[0].withValues(alpha: 0.1),
+            child: Center(
+              child: CircularProgressIndicator(color: widget.colorPair[0]),
+            ),
+          ),
+          errorBuilder: (context, errorMessage) {
+            return Container(
+              color: widget.colorPair[0].withValues(alpha: 0.1),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.error_outline, color: widget.colorPair[0]),
+                  const SizedBox(height: 8.0),
+                  Text(
+                    'Video failed to load',
+                    style: Theme.of(
+                      context,
+                    ).textTheme.bodySmall!.copyWith(color: widget.colorPair[0]),
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+        setState(() {});
       }
     } catch (e) {
       if (mounted) {
@@ -810,7 +830,8 @@ class _VideoPlayerWidgetState extends State<VideoPlayerWidget> {
 
   @override
   void dispose() {
-    _controller.dispose();
+    _chewieController?.dispose();
+    _videoPlayerController?.dispose();
     super.dispose();
   }
 
@@ -848,7 +869,7 @@ class _VideoPlayerWidgetState extends State<VideoPlayerWidget> {
       );
     }
 
-    if (!_isInitialized) {
+    if (_chewieController == null) {
       return Container(
         height: 200,
         color: widget.colorPair[0].withValues(alpha: 0.1),
@@ -858,36 +879,249 @@ class _VideoPlayerWidgetState extends State<VideoPlayerWidget> {
       );
     }
 
-    return SizedBox(
-      height: 200,
-      child: Stack(
-        alignment: Alignment.center,
-        children: [
-          AspectRatio(
-            aspectRatio: _controller.value.aspectRatio,
-            child: VideoPlayer(_controller),
-          ),
-          Container(
-            decoration: BoxDecoration(
-              color: Colors.black.withValues(alpha: 0.3),
-              shape: BoxShape.circle,
+    return SizedBox(height: 200, child: Chewie(controller: _chewieController!));
+  }
+}
+
+class AudioPlayerWidget extends StatefulWidget {
+  final String url;
+  final List<Color> colorPair;
+
+  const AudioPlayerWidget({
+    super.key,
+    required this.url,
+    required this.colorPair,
+  });
+
+  @override
+  State<AudioPlayerWidget> createState() => _AudioPlayerWidgetState();
+}
+
+class _AudioPlayerWidgetState extends State<AudioPlayerWidget> {
+  late AudioPlayer _player;
+  bool _hasError = false;
+  String _errorMessage = '';
+  bool _isInitialized = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _player = AudioPlayer();
+    _initializePlayer();
+  }
+
+  Future<void> _initializePlayer() async {
+    try {
+      await _player.setUrl(widget.url);
+      if (mounted) {
+        setState(() {
+          _isInitialized = true;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _hasError = true;
+          _errorMessage = e.toString();
+        });
+      }
+    }
+  }
+
+  @override
+  void dispose() {
+    _player.dispose();
+    super.dispose();
+  }
+
+  String _formatDuration(Duration? duration) {
+    if (duration == null) return '0:00';
+    String twoDigits(int n) => n.toString().padLeft(2, '0');
+    final minutes = duration.inMinutes;
+    final seconds = duration.inSeconds % 60;
+    return '$minutes:${twoDigits(seconds)}';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_hasError) {
+      return Container(
+        height: 80,
+        color: widget.colorPair[0].withValues(alpha: 0.1),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.error_outline, color: widget.colorPair[0]),
+            const SizedBox(height: 4.0),
+            Text(
+              'Audio failed to load',
+              style: Theme.of(
+                context,
+              ).textTheme.bodySmall!.copyWith(color: widget.colorPair[0]),
             ),
-            child: IconButton(
-              onPressed: () {
-                setState(() {
-                  if (_controller.value.isPlaying) {
-                    _controller.pause();
-                  } else {
-                    _controller.play();
-                  }
-                });
-              },
-              icon: Icon(
-                _controller.value.isPlaying ? Icons.pause : Icons.play_arrow,
-                color: Colors.white,
-                size: 30,
+            if (_errorMessage.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 8.0),
+                child: Text(
+                  _errorMessage,
+                  style: Theme.of(context).textTheme.bodySmall!.copyWith(
+                    color: widget.colorPair[0].withValues(alpha: 0.7),
+                    fontSize: 10,
+                  ),
+                  textAlign: TextAlign.center,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
               ),
+          ],
+        ),
+      );
+    }
+
+    if (!_isInitialized) {
+      return Container(
+        height: 80,
+        color: widget.colorPair[0].withValues(alpha: 0.1),
+        child: Center(
+          child: CircularProgressIndicator(color: widget.colorPair[0]),
+        ),
+      );
+    }
+
+    return Container(
+      height: 80,
+      color: widget.colorPair[0].withValues(alpha: 0.05),
+      padding: const EdgeInsets.all(12.0),
+      child: Row(
+        children: [
+          // Play/Pause Button
+          StreamBuilder<PlayerState>(
+            stream: _player.playerStateStream,
+            builder: (context, snapshot) {
+              final playerState = snapshot.data;
+              final isPlaying = playerState?.playing ?? false;
+
+              return GestureDetector(
+                onTap: () async {
+                  if (isPlaying) {
+                    await _player.pause();
+                  } else {
+                    await _player.play();
+                  }
+                },
+                child: Container(
+                  width: 48,
+                  height: 48,
+                  decoration: BoxDecoration(
+                    color: widget.colorPair[0],
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(
+                    isPlaying ? Icons.pause : Icons.play_arrow,
+                    color: Colors.white,
+                    size: 24,
+                  ),
+                ),
+              );
+            },
+          ),
+
+          const SizedBox(width: 12),
+
+          // Progress and Duration
+          Expanded(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Progress Bar
+                StreamBuilder<Duration?>(
+                  stream: _player.positionStream,
+                  builder: (context, snapshot) {
+                    final position = snapshot.data ?? Duration.zero;
+                    final duration = _player.duration ?? Duration.zero;
+                    final progress = duration.inMilliseconds > 0
+                        ? position.inMilliseconds / duration.inMilliseconds
+                        : 0.0;
+
+                    return SliderTheme(
+                      data: SliderTheme.of(context).copyWith(
+                        trackHeight: 4.0,
+                        thumbShape: RoundSliderThumbShape(
+                          enabledThumbRadius: 6.0,
+                        ),
+                        overlayShape: RoundSliderOverlayShape(
+                          overlayRadius: 14.0,
+                        ),
+                        activeTrackColor: widget.colorPair[0],
+                        inactiveTrackColor: widget.colorPair[0].withValues(
+                          alpha: 0.3,
+                        ),
+                        thumbColor: widget.colorPair[0],
+                        overlayColor: widget.colorPair[0].withValues(
+                          alpha: 0.2,
+                        ),
+                      ),
+                      child: Slider(
+                        value: progress.clamp(0.0, 1.0),
+                        onChanged: (value) async {
+                          final duration = _player.duration;
+                          if (duration != null) {
+                            final position = Duration(
+                              milliseconds: (value * duration.inMilliseconds)
+                                  .round(),
+                            );
+                            await _player.seek(position);
+                          }
+                        },
+                      ),
+                    );
+                  },
+                ),
+
+                // Time Display
+                StreamBuilder<Duration?>(
+                  stream: _player.positionStream,
+                  builder: (context, snapshot) {
+                    final position = snapshot.data ?? Duration.zero;
+                    final duration = _player.duration ?? Duration.zero;
+
+                    return Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          _formatDuration(position),
+                          style: Theme.of(context).textTheme.bodySmall!
+                              .copyWith(
+                                color: widget.colorPair[0],
+                                fontSize: 11,
+                              ),
+                        ),
+                        Text(
+                          _formatDuration(duration),
+                          style: Theme.of(context).textTheme.bodySmall!
+                              .copyWith(
+                                color: widget.colorPair[0].withValues(
+                                  alpha: 0.7,
+                                ),
+                                fontSize: 11,
+                              ),
+                        ),
+                      ],
+                    );
+                  },
+                ),
+              ],
             ),
+          ),
+
+          const SizedBox(width: 8),
+
+          // Audio Icon
+          Icon(
+            Icons.audiotrack,
+            color: widget.colorPair[0].withValues(alpha: 0.7),
+            size: 20,
           ),
         ],
       ),

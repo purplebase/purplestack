@@ -56,7 +56,9 @@ dependencies:
   auto_size_text: ^3.0.0
   percent_indicator: ^4.2.5
   flutter_layout_grid: ^2.0.8
+  chewie: ^1.8.5
   video_player: ^2.9.2
+  just_audio: ^0.9.42
 
 dependency_overrides:
   models:
