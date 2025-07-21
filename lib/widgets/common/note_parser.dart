@@ -3,6 +3,45 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:models/models.dart';
 import 'package:purplestack/utils/time_utils.dart';
 import 'package:purplestack/widgets/common/profile_avatar.dart';
+import 'package:any_link_preview/any_link_preview.dart';
+import 'package:url_launcher/url_launcher.dart';
+
+/// Helper function to launch URLs with robust error handling
+Future<void> _launchUrlSafely(String url, {String? context}) async {
+  try {
+    final prefix = context != null ? '$context: ' : '';
+    debugPrint('${prefix}Attempting to launch URL: $url');
+
+    // Clean and validate the URL
+    String cleanUrl = url.trim();
+    if (!cleanUrl.startsWith('http://') && !cleanUrl.startsWith('https://')) {
+      cleanUrl = 'https://$cleanUrl';
+      debugPrint('${prefix}Added https:// prefix. New URL: $cleanUrl');
+    }
+
+    final uri = Uri.parse(cleanUrl);
+    debugPrint('${prefix}Parsed URI: $uri');
+
+    if (await canLaunchUrl(uri)) {
+      debugPrint('${prefix}canLaunchUrl returned true, launching...');
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
+      debugPrint('${prefix}Launch successful');
+    } else {
+      debugPrint('${prefix}canLaunchUrl returned false for: $cleanUrl');
+      // Try alternative launch mode
+      try {
+        await launchUrl(uri, mode: LaunchMode.platformDefault);
+        debugPrint('${prefix}Launch successful with platformDefault mode');
+      } catch (e2) {
+        debugPrint('${prefix}Both launch modes failed: $e2');
+      }
+    }
+  } catch (e) {
+    final prefix = context != null ? '$context: ' : '';
+    debugPrint('${prefix}Error launching URL: $e');
+    debugPrint('${prefix}Original URL: $url');
+  }
+}
 
 /// A utility for parsing Nostr note content and replacing entities with custom widgets.
 class NoteParser {
@@ -283,25 +322,17 @@ class ProfileEntityWidget extends ConsumerWidget {
     return GestureDetector(
       onTap: () => debugPrint('Navigate to profile: ${profileData.pubkey}'),
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 4.0),
+        padding: const EdgeInsets.symmetric(horizontal: 4.0),
         decoration: BoxDecoration(
           color: colorPair[0].withValues(alpha: 0.1),
-          borderRadius: BorderRadius.circular(8.0),
+          borderRadius: BorderRadius.circular(4.0),
         ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            ProfileAvatar(profile: profile, radius: 8, borderColors: colorPair),
-            const SizedBox(width: 4.0),
-            Text(
-              displayName,
-              style: Theme.of(context).textTheme.bodyMedium!.copyWith(
-                fontSize: 14,
-                fontWeight: FontWeight.w500,
-                color: colorPair[0],
-              ),
-            ),
-          ],
+        child: Text(
+          displayName,
+          style: Theme.of(context).textTheme.bodyMedium!.copyWith(
+            fontWeight: FontWeight.w500,
+            color: colorPair[0],
+          ),
         ),
       ),
     );
@@ -408,25 +439,17 @@ class AddressEntityWidget extends StatelessWidget {
     return GestureDetector(
       onTap: () => debugPrint('Navigate to address: ${addressData.identifier}'),
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 4.0),
+        padding: const EdgeInsets.symmetric(horizontal: 4.0),
         decoration: BoxDecoration(
           color: colorPair[0].withValues(alpha: 0.1),
-          borderRadius: BorderRadius.circular(8.0),
+          borderRadius: BorderRadius.circular(4.0),
         ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(Icons.article, size: 16, color: colorPair[0]),
-            const SizedBox(width: 4.0),
-            Text(
-              addressData.identifier,
-              style: Theme.of(context).textTheme.bodyMedium!.copyWith(
-                fontSize: 14,
-                fontWeight: FontWeight.w500,
-                color: colorPair[0],
-              ),
-            ),
-          ],
+        child: Text(
+          addressData.identifier,
+          style: Theme.of(context).textTheme.bodyMedium!.copyWith(
+            fontWeight: FontWeight.w500,
+            color: colorPair[0],
+          ),
         ),
       ),
     );
@@ -446,15 +469,14 @@ class GenericNip19Widget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 4.0),
+      padding: const EdgeInsets.symmetric(horizontal: 4.0),
       decoration: BoxDecoration(
         color: colorPair[0].withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(8.0),
+        borderRadius: BorderRadius.circular(4.0),
       ),
       child: Text(
         entity,
         style: Theme.of(context).textTheme.bodyMedium!.copyWith(
-          fontSize: 14,
           fontWeight: FontWeight.w500,
           color: colorPair[0],
         ),
@@ -488,9 +510,8 @@ class ParsedContentWidget extends StatelessWidget {
     return NoteParser.parse(
       context,
       content,
-      textStyle: Theme.of(context).textTheme.bodyMedium!.copyWith(fontSize: 15),
+      textStyle: Theme.of(context).textTheme.bodyMedium,
       linkStyle: Theme.of(context).textTheme.bodyMedium!.copyWith(
-        fontSize: 15,
         color: colorPair[0],
         decoration: TextDecoration.underline,
       ),
@@ -510,30 +531,52 @@ class UrlChipWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Fallback widget for when preview fails
+    Widget fallbackWidget = GestureDetector(
+      onTap: () => _launchUrlSafely(url, context: 'Fallback'),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 4.0),
+        decoration: BoxDecoration(
+          color: colorPair[0].withValues(alpha: 0.1),
+          borderRadius: BorderRadius.circular(4.0),
+        ),
+        child: Text(
+          url,
+          style: Theme.of(context).textTheme.bodyMedium!.copyWith(
+            color: colorPair[0],
+            decoration: TextDecoration.underline,
+          ),
+          overflow: TextOverflow.ellipsis,
+        ),
+      ),
+    );
+
     return Container(
       margin: const EdgeInsets.symmetric(vertical: 4.0),
-      padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 4.0),
-      decoration: BoxDecoration(
-        color: colorPair[0].withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(8.0),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(Icons.link, size: 16, color: colorPair[0]),
-          const SizedBox(width: 4.0),
-          Flexible(
-            child: Text(
-              url,
-              style: Theme.of(context).textTheme.bodyMedium!.copyWith(
-                fontSize: 14,
-                color: colorPair[0],
-                decoration: TextDecoration.underline,
-              ),
-              overflow: TextOverflow.ellipsis,
-            ),
-          ),
-        ],
+      child: AnyLinkPreview(
+        link: url,
+        displayDirection: UIDirection.uiDirectionHorizontal,
+        showMultimedia: true,
+        bodyMaxLines: 2,
+        bodyTextOverflow: TextOverflow.ellipsis,
+        titleStyle: Theme.of(context).textTheme.bodyMedium!.copyWith(
+          fontWeight: FontWeight.w600,
+          fontSize: 14,
+        ),
+        bodyStyle: Theme.of(
+          context,
+        ).textTheme.bodySmall!.copyWith(color: Colors.grey[600], fontSize: 12),
+        cache: Duration.zero,
+        backgroundColor: colorPair[0].withValues(alpha: 0.05),
+        borderRadius: 8.0,
+        removeElevation: true,
+        boxShadow: const [],
+        onTap: () => _launchUrlSafely(url, context: 'Link Preview'),
+        errorWidget: fallbackWidget,
+        errorBody: 'Link preview unavailable',
+        errorTitle: 'Unable to load preview',
+        errorImage: '',
+        placeholderWidget: fallbackWidget,
       ),
     );
   }

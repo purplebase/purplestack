@@ -49,8 +49,9 @@ dependencies:
   google_fonts: ^6.2.1
   fluttertoast: ^8.2.12
   table_calendar: ^3.2.0
-  pub_api_client: ^3.1.1
-  mcp_dart: ^0.5.3
+  any_link_preview: ^3.0.3
+  http: ^1.2.1
+  url_launcher: ^6.3.0
 
 dependency_overrides:
   models:
