@@ -700,30 +700,34 @@ class UrlChipWidget extends StatelessWidget {
 
     return Container(
       margin: const EdgeInsets.symmetric(vertical: 4.0),
-      child: AnyLinkPreview(
-        link: url,
-        displayDirection: UIDirection.uiDirectionHorizontal,
-        showMultimedia: true,
-        bodyMaxLines: 2,
-        bodyTextOverflow: TextOverflow.ellipsis,
-        titleStyle: Theme.of(context).textTheme.bodyMedium!.copyWith(
-          fontWeight: FontWeight.w600,
-          fontSize: 14,
+      child: Material(
+        color: Colors.transparent,
+        child: AnyLinkPreview(
+          link: url,
+          displayDirection: UIDirection.uiDirectionHorizontal,
+          showMultimedia: true,
+          bodyMaxLines: 2,
+          bodyTextOverflow: TextOverflow.ellipsis,
+          titleStyle: Theme.of(context).textTheme.bodyMedium!.copyWith(
+            fontWeight: FontWeight.w600,
+            fontSize: 14,
+          ),
+          bodyStyle: Theme.of(context).textTheme.bodySmall!.copyWith(
+            color: Colors.grey[600],
+            fontSize: 12,
+          ),
+          cache: Duration.zero,
+          backgroundColor: colorPair[0].withValues(alpha: 0.05),
+          borderRadius: 8.0,
+          removeElevation: true,
+          boxShadow: const [],
+          onTap: () => _launchUrlSafely(url, context: 'Link Preview'),
+          errorWidget: fallbackWidget,
+          errorBody: 'Link preview unavailable',
+          errorTitle: 'Unable to load preview',
+          errorImage: '',
+          placeholderWidget: fallbackWidget,
         ),
-        bodyStyle: Theme.of(
-          context,
-        ).textTheme.bodySmall!.copyWith(color: Colors.grey[600], fontSize: 12),
-        cache: Duration.zero,
-        backgroundColor: colorPair[0].withValues(alpha: 0.05),
-        borderRadius: 8.0,
-        removeElevation: true,
-        boxShadow: const [],
-        onTap: () => _launchUrlSafely(url, context: 'Link Preview'),
-        errorWidget: fallbackWidget,
-        errorBody: 'Link preview unavailable',
-        errorTitle: 'Unable to load preview',
-        errorImage: '',
-        placeholderWidget: fallbackWidget,
       ),
     );
   }

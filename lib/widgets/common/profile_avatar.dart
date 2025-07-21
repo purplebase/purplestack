@@ -16,12 +16,15 @@ class ProfileAvatar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final fallbackColor = borderColors!.first;
+    final fallbackColor =
+        borderColors?.first ?? Theme.of(context).colorScheme.primary;
+
+    final pictureUrl = profile?.pictureUrl;
 
     Widget avatar = ClipOval(
-      child: profile?.pictureUrl != null
+      child: pictureUrl != null && pictureUrl.isNotEmpty
           ? CachedNetworkImage(
-              imageUrl: profile!.pictureUrl!,
+              imageUrl: pictureUrl,
               fit: BoxFit.cover,
               width: radius * 2,
               height: radius * 2,
