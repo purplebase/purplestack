@@ -113,7 +113,7 @@ class _EngagementItem extends StatelessWidget {
   Widget build(BuildContext context) {
     final color = isActive
         ? activeColor
-        : theme.colorScheme.onSurface.withOpacity(0.6);
+        : theme.colorScheme.onSurface.withValues(alpha: 0.6);
 
     final displayIcon = isActive && activeIcon != null ? activeIcon! : icon;
 
@@ -171,7 +171,7 @@ class _ZapItem extends StatelessWidget {
   Widget build(BuildContext context) {
     final color = isActive
         ? const Color(0xFFFF9800) // Material Orange
-        : theme.colorScheme.onSurface.withOpacity(0.6);
+        : theme.colorScheme.onSurface.withValues(alpha: 0.6);
 
     return InkWell(
       onTap: onTap,

@@ -562,7 +562,11 @@ icons_launcher:
     ```
 - Always use meaningful variable and function names
 - Add comments for complex logic only
-- Always ensure no compiler errors nor warnings are left. The goal is to have ZERO compiler messages in the console. If in doubt, stop and ask, as some warnings can be turned off in analysis_options
+- Fix ALL compiler warnings and errors immediately - The goal is ZERO compiler messages in the console. Run `flutter analyze` before completing any task and fix every single issue it reports:
+  - Warnings (marked with ⚠️ or "warning") must be fixed - these indicate potential bugs
+  - Info messages (marked with ℹ️ or "info") should also be addressed - these improve code quality
+  - Never ignore or skip compiler messages - if unsure how to fix, ask for guidance
+  - Always run `flutter analyze` as your final step before marking any task complete
 - Avoid superfluous comments like: `relay.stop(); // Stops the relay`. Only add comments in complex scenarios when code can't clearly express what is going on
 - Hardcoding and workarounds: **explicitly forbidden**. For example, do not make special cases just for tests to pass, like cheating in an exam. You should always prioritize the architecturally sound approach, even if it takes a bit longer
 - Never use artificial waits (`Future.delayed`) unless it is absolutely necessary for a particular feature. Properly awaiting futures is the architecturally sound way and should always be prioritized.

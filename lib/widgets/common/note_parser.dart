@@ -5,6 +5,11 @@ import 'package:purplestack/widgets/common/time_utils.dart';
 import 'package:purplestack/widgets/common/profile_avatar.dart';
 import 'package:any_link_preview/any_link_preview.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:cached_network_image/cached_network_image.dart';
+import 'package:video_player/video_player.dart';
+
+/// Enum for different media types
+enum MediaType { image, video, audio, none }
 
 /// Helper function to launch URLs with robust error handling
 Future<void> _launchUrlSafely(String url, {String? context}) async {
@@ -56,8 +61,8 @@ class NoteParser {
     caseSensitive: false,
   );
 
-  // Common media file extensions
-  static final Set<String> _mediaExtensions = {
+  // Image file extensions
+  static final Set<String> _imageExtensions = {
     'jpg',
     'jpeg',
     'png',
@@ -65,15 +70,19 @@ class NoteParser {
     'webp',
     'bmp',
     'svg',
+  };
+
+  // Video file extensions
+  static final Set<String> _videoExtensions = {
     'mp4',
     'webm',
     'avi',
     'mov',
     'mkv',
-    'mp3',
-    'wav',
-    'ogg',
   };
+
+  // Audio file extensions (for future use)
+  static final Set<String> _audioExtensions = {'mp3', 'wav', 'ogg'};
 
   /// Parses note content and returns a RichText widget with custom entity replacements.
   ///
@@ -199,16 +208,30 @@ class NoteParser {
     return RichText(text: TextSpan(children: spans));
   }
 
-  /// Checks if a URL is likely a media URL based on file extension
-  static bool _isMediaUrl(String url) {
+  /// Checks if a URL is likely a media URL and returns the media type
+  static MediaType _getMediaType(String url) {
     try {
       final uri = Uri.parse(url);
       final path = uri.path.toLowerCase();
       final extension = path.split('.').last;
-      return _mediaExtensions.contains(extension);
+
+      if (_imageExtensions.contains(extension)) {
+        return MediaType.image;
+      } else if (_videoExtensions.contains(extension)) {
+        return MediaType.video;
+      } else if (_audioExtensions.contains(extension)) {
+        return MediaType.audio;
+      } else {
+        return MediaType.none;
+      }
     } catch (e) {
-      return false;
+      return MediaType.none;
     }
+  }
+
+  /// Checks if a URL is likely a media URL based on file extension
+  static bool _isMediaUrl(String url) {
+    return _getMediaType(url) != MediaType.none;
   }
 
   /// Validates if a string is a valid NIP-19 entity
@@ -643,6 +666,8 @@ class MediaWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final mediaType = NoteParser._getMediaType(url);
+
     return Container(
       margin: const EdgeInsets.symmetric(vertical: 8.0),
       decoration: BoxDecoration(
@@ -651,45 +676,220 @@ class MediaWidget extends StatelessWidget {
       ),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(12.0),
-        child: Image.network(
-          url,
-          fit: BoxFit.cover,
-          loadingBuilder: (context, child, loadingProgress) {
-            if (loadingProgress == null) return child;
-            return Container(
-              height: 200,
-              color: colorPair[0].withValues(alpha: 0.1),
-              child: Center(
-                child: CircularProgressIndicator(
-                  color: colorPair[0],
-                  value: loadingProgress.expectedTotalBytes != null
-                      ? loadingProgress.cumulativeBytesLoaded /
-                            loadingProgress.expectedTotalBytes!
-                      : null,
+        child: switch (mediaType) {
+          MediaType.image => _buildImageWidget(context),
+          MediaType.video => _buildVideoWidget(context),
+          MediaType.audio => _buildAudioWidget(context),
+          MediaType.none => _buildUnsupportedWidget(context),
+        },
+      ),
+    );
+  }
+
+  Widget _buildImageWidget(BuildContext context) {
+    return CachedNetworkImage(
+      imageUrl: url,
+      fit: BoxFit.cover,
+      placeholder: (context, url) => Container(
+        height: 200,
+        color: colorPair[0].withValues(alpha: 0.1),
+        child: Center(child: CircularProgressIndicator(color: colorPair[0])),
+      ),
+      errorWidget: (context, url, error) => Container(
+        height: 60,
+        color: colorPair[0].withValues(alpha: 0.1),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.broken_image, color: colorPair[0]),
+            const SizedBox(width: 8.0),
+            Text(
+              'Image failed to load',
+              style: Theme.of(
+                context,
+              ).textTheme.bodySmall!.copyWith(color: colorPair[0]),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildVideoWidget(BuildContext context) {
+    return VideoPlayerWidget(url: url, colorPair: colorPair);
+  }
+
+  Widget _buildAudioWidget(BuildContext context) {
+    // For now, show a placeholder for audio files
+    // TODO: Implement audio player when needed
+    return Container(
+      height: 60,
+      color: colorPair[0].withValues(alpha: 0.1),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Icons.audiotrack, color: colorPair[0]),
+          const SizedBox(width: 8.0),
+          Text(
+            'Audio file',
+            style: Theme.of(
+              context,
+            ).textTheme.bodySmall!.copyWith(color: colorPair[0]),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildUnsupportedWidget(BuildContext context) {
+    return Container(
+      height: 60,
+      color: colorPair[0].withValues(alpha: 0.1),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Icons.help_outline, color: colorPair[0]),
+          const SizedBox(width: 8.0),
+          Text(
+            'Unsupported media type',
+            style: Theme.of(
+              context,
+            ).textTheme.bodySmall!.copyWith(color: colorPair[0]),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class VideoPlayerWidget extends StatefulWidget {
+  final String url;
+  final List<Color> colorPair;
+
+  const VideoPlayerWidget({
+    super.key,
+    required this.url,
+    required this.colorPair,
+  });
+
+  @override
+  State<VideoPlayerWidget> createState() => _VideoPlayerWidgetState();
+}
+
+class _VideoPlayerWidgetState extends State<VideoPlayerWidget> {
+  late VideoPlayerController _controller;
+  bool _isInitialized = false;
+  bool _hasError = false;
+  String _errorMessage = '';
+
+  @override
+  void initState() {
+    super.initState();
+    _initializeVideo();
+  }
+
+  Future<void> _initializeVideo() async {
+    try {
+      _controller = VideoPlayerController.networkUrl(Uri.parse(widget.url));
+      await _controller.initialize();
+
+      if (mounted) {
+        setState(() {
+          _isInitialized = true;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _hasError = true;
+          _errorMessage = e.toString();
+        });
+      }
+    }
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_hasError) {
+      return Container(
+        height: 200,
+        color: widget.colorPair[0].withValues(alpha: 0.1),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.error_outline, color: widget.colorPair[0]),
+            const SizedBox(height: 8.0),
+            Text(
+              'Video failed to load',
+              style: Theme.of(
+                context,
+              ).textTheme.bodySmall!.copyWith(color: widget.colorPair[0]),
+            ),
+            if (_errorMessage.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.all(8.0),
+                child: Text(
+                  _errorMessage,
+                  style: Theme.of(context).textTheme.bodySmall!.copyWith(
+                    color: widget.colorPair[0].withValues(alpha: 0.7),
+                    fontSize: 10,
+                  ),
+                  textAlign: TextAlign.center,
                 ),
               ),
-            );
-          },
-          errorBuilder: (context, error, stackTrace) {
-            return Container(
-              height: 60,
-              color: colorPair[0].withValues(alpha: 0.1),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.broken_image, color: colorPair[0]),
-                  const SizedBox(width: 8.0),
-                  Text(
-                    'Media failed to load',
-                    style: Theme.of(
-                      context,
-                    ).textTheme.bodySmall!.copyWith(color: colorPair[0]),
-                  ),
-                ],
-              ),
-            );
-          },
+          ],
         ),
+      );
+    }
+
+    if (!_isInitialized) {
+      return Container(
+        height: 200,
+        color: widget.colorPair[0].withValues(alpha: 0.1),
+        child: Center(
+          child: CircularProgressIndicator(color: widget.colorPair[0]),
+        ),
+      );
+    }
+
+    return SizedBox(
+      height: 200,
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          AspectRatio(
+            aspectRatio: _controller.value.aspectRatio,
+            child: VideoPlayer(_controller),
+          ),
+          Container(
+            decoration: BoxDecoration(
+              color: Colors.black.withValues(alpha: 0.3),
+              shape: BoxShape.circle,
+            ),
+            child: IconButton(
+              onPressed: () {
+                setState(() {
+                  if (_controller.value.isPlaying) {
+                    _controller.pause();
+                  } else {
+                    _controller.play();
+                  }
+                });
+              },
+              icon: Icon(
+                _controller.value.isPlaying ? Icons.pause : Icons.play_arrow,
+                color: Colors.white,
+                size: 30,
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
