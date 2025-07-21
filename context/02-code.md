@@ -36,6 +36,161 @@
 - Keep widgets of small or medium size and focused
 - Use Dart constants for magic numbers and strings (`kConstant`)
 
+### Common Widget Architecture - CRITICAL RULE
+
+**⚠️ NEVER MODIFY WIDGETS IN `lib/widgets/common/` WITH APP-SPECIFIC BEHAVIOR**
+
+The widgets in the `common` folder are **GENERIC, REUSABLE COMPONENTS** that must remain pure and framework-agnostic. These widgets serve as the foundation layer for all Purplestack applications.
+
+#### What Makes a Widget "Generic" vs "App-Specific"
+
+**✅ Generic (belongs in `/common/`):**
+- Takes data through parameters, never hardcodes app-specific values
+- Uses callback functions (`onTap`, `onLike`, etc.) to handle actions
+- Focuses on rendering and interaction patterns, not business logic
+- Can be used across different applications without modification
+- Configurable through props and styling parameters
+
+**❌ App-Specific (belongs in app screens/widgets):**
+- Hardcoded business rules or app-specific behavior
+- Direct navigation to specific screens
+- Hardcoded data sources or API calls
+- App-specific styling that can't be configured
+- Logic that only makes sense in one application context
+
+#### Examples of FORBIDDEN Modifications
+
+```dart
+// ❌ FORBIDDEN: Adding app-specific logic to EngagementRow
+class EngagementRow extends StatelessWidget {
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        IconButton(
+          onPressed: () {
+            // This is app-specific navigation - FORBIDDEN in common widgets
+            Navigator.pushNamed(context, '/comments'); 
+          },
+          icon: Icon(Icons.comment),
+        ),
+        // More forbidden app-specific logic...
+      ],
+    );
+  }
+}
+
+// ❌ FORBIDDEN: Hardcoding app-specific behavior in NoteParser
+class NoteParser {
+  static Widget parse(String content) {
+    return TextSpan(
+      children: [
+        // This hardcodes app-specific behavior - FORBIDDEN
+        if (content.contains('farming')) 
+          WidgetSpan(child: FarmingBadge()),
+      ],
+    );
+  }
+}
+```
+
+#### Correct Usage: Keep Common Widgets Generic
+
+```dart
+// ✅ CORRECT: Generic EngagementRow that delegates through callbacks
+EngagementRow(
+  likesCount: note.reactions.length,
+  onLike: () {
+    // App-specific logic goes in the consuming widget/screen
+    _handleLikeAction(note);
+  },
+  onComment: () {
+    // App-specific navigation goes in the consuming widget/screen  
+    Navigator.pushNamed(context, '/comments', arguments: note);
+  },
+)
+
+// ✅ CORRECT: Generic NoteParser with configurable callbacks
+NoteParser.parse(
+  context,
+  note.content,
+  onNostrEntity: (entity) {
+    // App-specific entity rendering goes in the consuming widget
+    return _buildCustomEntityWidget(entity);
+  },
+)
+```
+
+#### Current Generic Widgets (DO NOT MODIFY)
+
+These widgets are already properly designed as generic components:
+
+1. **`NoteParser`** - Parses Nostr content with customizable callbacks for entities, media, and links
+2. **`EngagementRow`** - Social engagement metrics with callback-based interaction handling
+3. **`TimeUtils` & `TimeAgoText`** - Time formatting utilities with reactive updates
+4. **`ProfileAvatar`** - Avatar component that takes a Profile model and styling parameters
+
+#### How to Extend Generic Widgets
+
+**When you need app-specific behavior:**
+
+1. **Use the existing callback system** - All generic widgets provide callbacks for customization
+2. **Wrap, don't modify** - Create app-specific wrapper widgets that use the generic component
+3. **Compose, don't pollute** - Build complex behaviors by composing multiple generic widgets
+
+**Example: Creating an App-Specific Note Card**
+
+```dart
+// ✅ CORRECT: App-specific wrapper that uses generic components
+class FarmingNoteCard extends ConsumerWidget {
+  final Note note;
+  
+  Widget build(BuildContext context, WidgetRef ref) {
+    return Card(
+      child: Column(
+        children: [
+          // Use generic ProfileAvatar
+          ProfileAvatar(profile: note.author.value),
+          
+          // Use generic NoteParser with app-specific callbacks
+          NoteParser.parse(
+            context,
+            note.content,
+            onNostrEntity: (entity) => _buildFarmingEntity(entity),
+            onMediaUrl: (url) => _buildFarmingMedia(url),
+          ),
+          
+          // Use generic EngagementRow with app-specific actions
+          EngagementRow(
+            likesCount: note.reactions.length,
+            onLike: () => _handleFarmingLike(note),
+            onComment: () => _navigateToFarmingComments(note),
+          ),
+        ],
+      ),
+    );
+  }
+  
+  // App-specific methods stay in the app-specific widget
+  Widget _buildFarmingEntity(String entity) { /* ... */ }
+  Widget _buildFarmingMedia(String url) { /* ... */ }
+  void _handleFarmingLike(Note note) { /* ... */ }
+  void _navigateToFarmingComments(Note note) { /* ... */ }
+}
+```
+
+#### Enforcement
+
+- **Before modifying any file in `/common/`:** Ask yourself "Would this change make sense in every Purplestack application?"
+- **If the answer is no:** Create a new app-specific widget that composes the generic components
+- **Code reviews must reject** any pull requests that add app-specific behavior to common widgets
+- **When in doubt:** Discuss the change with the team before implementation
+
+This separation ensures:
+- ✅ Reusability across different Purplestack applications  
+- ✅ Easier maintenance and testing
+- ✅ Clear separation of concerns
+- ✅ Framework-level stability
+
 ### Testing
 
 **⚠️ DO NOT WRITE TESTS** unless the user is experiencing a specific problem or explicitly requests tests. Writing unnecessary tests wastes significant time and money. Only create tests when:
@@ -66,8 +221,10 @@ Assertions/expects in tests should be as detailed as possible, that is, do not s
 **Always check for existing utilities before creating new ones.** The project includes several utility classes that should be used consistently:
 
 - **TimeUtils & TimeAgoText**: Use for all timestamp formatting with both static and reactive options
+  - ⚠️ **These are generic components in `/common/` - never modify with app-specific behavior**
 - **Utils (from models package)**: Use for all Nostr-related utilities (key generation, encoding/decoding, etc.)
 - **NoteParser**: REQUIRED for displaying any note content - never display raw note text
+  - ⚠️ **This is a generic component in `/common/` - never modify with app-specific behavior**
 
 **Time Formatting Guidelines:**
 - Use `TimeAgoText` for timestamps that need to auto-update (feeds, chats, live content)

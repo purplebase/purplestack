@@ -37,13 +37,28 @@ class EngagementRow extends StatelessWidget {
 
     return Row(
       children: [
+        // Comments (first now)
+        if (commentsCount != null) ...[
+          _EngagementItem(
+            icon: Icons.mode_comment_outlined,
+            activeIcon: Icons.mode_comment,
+            count: commentsCount!,
+            onTap: onComment,
+            isActive: false,
+            activeColor: colorScheme.primary,
+            theme: theme,
+          ),
+          const SizedBox(width: 24),
+        ],
+
         // Likes
         _EngagementItem(
-          icon: Icons.favorite,
+          icon: Icons.favorite_border,
+          activeIcon: Icons.favorite,
           count: likesCount,
           onTap: onLike,
           isActive: isLiked,
-          activeColor: Colors.red,
+          activeColor: const Color(0xFFE91E63), // Material Pink
           theme: theme,
         ),
 
@@ -52,10 +67,11 @@ class EngagementRow extends StatelessWidget {
         // Reposts
         _EngagementItem(
           icon: Icons.repeat,
+          activeIcon: Icons.repeat,
           count: repostsCount,
           onTap: onRepost,
           isActive: isReposted,
-          activeColor: Colors.green,
+          activeColor: const Color(0xFF4CAF50), // Material Green
           theme: theme,
         ),
 
@@ -69,19 +85,6 @@ class EngagementRow extends StatelessWidget {
           isActive: isZapped,
           theme: theme,
         ),
-
-        // Comments (optional)
-        if (commentsCount != null) ...[
-          const SizedBox(width: 24),
-          _EngagementItem(
-            icon: Icons.mode_comment_outlined,
-            count: commentsCount!,
-            onTap: onComment,
-            isActive: false,
-            activeColor: colorScheme.primary,
-            theme: theme,
-          ),
-        ],
       ],
     );
   }
@@ -89,6 +92,7 @@ class EngagementRow extends StatelessWidget {
 
 class _EngagementItem extends StatelessWidget {
   final IconData icon;
+  final IconData? activeIcon;
   final int count;
   final VoidCallback? onTap;
   final bool isActive;
@@ -97,6 +101,7 @@ class _EngagementItem extends StatelessWidget {
 
   const _EngagementItem({
     required this.icon,
+    this.activeIcon,
     required this.count,
     required this.onTap,
     required this.isActive,
@@ -110,6 +115,8 @@ class _EngagementItem extends StatelessWidget {
         ? activeColor
         : theme.colorScheme.onSurface.withOpacity(0.6);
 
+    final displayIcon = isActive && activeIcon != null ? activeIcon! : icon;
+
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(8),
@@ -118,14 +125,14 @@ class _EngagementItem extends StatelessWidget {
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(isActive ? icon : icon, size: 16, color: color),
+            Icon(displayIcon, size: 17, color: color),
             if (count > 0) ...[
               const SizedBox(width: 4),
               Text(
                 _formatCount(count),
                 style: theme.textTheme.labelSmall?.copyWith(
                   color: color,
-                  fontWeight: isActive ? FontWeight.w500 : FontWeight.normal,
+                  fontWeight: isActive ? FontWeight.w600 : FontWeight.normal,
                 ),
               ),
             ],
@@ -163,7 +170,7 @@ class _ZapItem extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final color = isActive
-        ? Colors.orange
+        ? const Color(0xFFFF9800) // Material Orange
         : theme.colorScheme.onSurface.withOpacity(0.6);
 
     return InkWell(
@@ -174,14 +181,14 @@ class _ZapItem extends StatelessWidget {
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.flash_on, size: 16, color: color),
+            Icon(Icons.bolt, size: 17, color: color),
             if (count > 0 || satAmount > 0) ...[
               const SizedBox(width: 4),
               Text(
                 satAmount > 0 ? _formatSats(satAmount) : count.toString(),
                 style: theme.textTheme.labelSmall?.copyWith(
                   color: color,
-                  fontWeight: isActive ? FontWeight.w500 : FontWeight.normal,
+                  fontWeight: isActive ? FontWeight.w600 : FontWeight.normal,
                 ),
               ),
             ],

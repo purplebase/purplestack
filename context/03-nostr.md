@@ -276,6 +276,8 @@ For nostr-related utilities always look first in the `models` or `purplebase` pa
 
 ### Rendering Note Content
 
+**⚠️ Important**: `NoteParser` is a generic component in `/common/`. Never modify it with app-specific behavior - use its callback system for customization. See the **Common Widget Architecture** section in Code Guidelines.
+
 Use `NoteParser.parse()` to automatically detect and render NIP-19 entities, media URLs, and links in note content:
 
 ```dart
@@ -329,6 +331,8 @@ NoteParser.parse(
 **Important**: Any time you display note content (kind 1, kind 11, kind 1111), you MUST use this instead of displaying raw text.
 
 ### Displaying Engagement Information
+
+**⚠️ Important**: `EngagementRow` is a generic component in `/common/`. Never modify it with app-specific behavior - use its callback system for customization. See the **Common Widget Architecture** section in Code Guidelines.
 
 Use the `EngagementRow` widget to display social engagement metrics (likes, reposts, zaps, comments) for Nostr notes in a clean, Material 3 design.
 

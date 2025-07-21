@@ -79,6 +79,7 @@ This is a standard Flutter app with multi-platform support, but here are additio
 - `lib/router.dart`: Router configuration and provider
 - `lib/theme.dart`: Theme related code and providers
 - `lib/widgets`: Shared UI components
+  - **`lib/widgets/common/`**: ⚠️ **CRITICAL - Generic, reusable components that must NEVER be modified with app-specific behavior. See detailed guidelines in Code Guidelines section.**
 - `lib/screens`: Screen components used by the router
 - `lib/utils`: Utility functions and shared logic
 - `test/utils`: Testing utilities

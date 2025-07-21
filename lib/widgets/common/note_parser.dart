@@ -82,6 +82,7 @@ class NoteParser {
   /// [onNostrEntity] - Optional callback for replacing NIP-19 entities (npub, note, etc.)
   /// [onHttpUrl] - Optional callback for replacing HTTP URLs
   /// [onMediaUrl] - Optional callback specifically for media URLs (images, videos, etc.)
+  /// [onProfileTap] - Optional callback for when a profile is tapped
   /// [textStyle] - Default text style for regular text
   /// [linkStyle] - Text style for unhandled links (when callback returns null)
   static Widget parse(
@@ -90,6 +91,7 @@ class NoteParser {
     Widget? Function(String entity)? onNostrEntity,
     Widget? Function(String httpUrl)? onHttpUrl,
     Widget? Function(String mediaUrl)? onMediaUrl,
+    void Function(String pubkey)? onProfileTap,
     TextStyle? textStyle,
     TextStyle? linkStyle,
   }) {
@@ -273,11 +275,13 @@ enum _EntityType { nip19, http, media }
 class NostrEntityWidget extends StatelessWidget {
   final String entity;
   final List<Color> colorPair;
+  final void Function(String pubkey)? onProfileTap;
 
   const NostrEntityWidget({
     super.key,
     required this.entity,
     required this.colorPair,
+    this.onProfileTap,
   });
 
   @override
@@ -289,10 +293,12 @@ class NostrEntityWidget extends StatelessWidget {
         ProfileData() => ProfileEntityWidget(
           profileData: decoded,
           colorPair: colorPair,
+          onProfileTap: onProfileTap,
         ),
         EventData() => EventEntityWidget(
           eventData: decoded,
           colorPair: colorPair,
+          onProfileTap: onProfileTap,
         ),
         AddressData() => AddressEntityWidget(
           addressData: decoded,
@@ -308,11 +314,13 @@ class NostrEntityWidget extends StatelessWidget {
 class ProfileEntityWidget extends ConsumerWidget {
   final ProfileData profileData;
   final List<Color> colorPair;
+  final void Function(String pubkey)? onProfileTap;
 
   const ProfileEntityWidget({
     super.key,
     required this.profileData,
     required this.colorPair,
+    this.onProfileTap,
   });
 
   @override
@@ -326,7 +334,9 @@ class ProfileEntityWidget extends ConsumerWidget {
         profile?.nameOrNpub ?? '${profileData.pubkey.substring(0, 8)}...';
 
     return GestureDetector(
-      onTap: () => debugPrint('Navigate to profile: ${profileData.pubkey}'),
+      onTap: onProfileTap != null
+          ? () => onProfileTap!(profileData.pubkey)
+          : null,
       child: DecoratedBox(
         decoration: BoxDecoration(
           color: colorPair[0].withValues(alpha: 0.1),
@@ -350,11 +360,13 @@ class ProfileEntityWidget extends ConsumerWidget {
 class EventEntityWidget extends ConsumerWidget {
   final EventData eventData;
   final List<Color> colorPair;
+  final void Function(String pubkey)? onProfileTap;
 
   const EventEntityWidget({
     super.key,
     required this.eventData,
     required this.colorPair,
+    this.onProfileTap,
   });
 
   @override
@@ -374,20 +386,32 @@ class EventEntityWidget extends ConsumerWidget {
         margin: const EdgeInsets.symmetric(vertical: 8.0),
         padding: const EdgeInsets.all(16.0),
         decoration: BoxDecoration(
-          color: Colors.grey[100],
+          color: Theme.of(context).colorScheme.surfaceContainer,
           borderRadius: BorderRadius.circular(12.0),
-          border: Border.all(color: Colors.grey[300]!),
+          border: Border.all(
+            color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.3),
+          ),
         ),
         child: Row(
           children: [
-            Icon(Icons.note_alt, size: 16, color: Colors.grey[600]),
+            SizedBox(
+              width: 16,
+              height: 16,
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+                color: colorPair[0],
+              ),
+            ),
             const SizedBox(width: 8.0),
             Expanded(
               child: Text(
-                'Referenced note (${eventData.eventId.substring(0, 8)}...)',
-                style: Theme.of(
-                  context,
-                ).textTheme.bodySmall!.copyWith(fontStyle: FontStyle.italic),
+                'Loading note (${eventData.eventId.substring(0, 8)}...)',
+                style: Theme.of(context).textTheme.bodySmall!.copyWith(
+                  fontStyle: FontStyle.italic,
+                  color: Theme.of(
+                    context,
+                  ).colorScheme.onSurface.withValues(alpha: 0.7),
+                ),
               ),
             ),
           ],
@@ -402,30 +426,35 @@ class EventEntityWidget extends ConsumerWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Row(
-              children: [
-                ProfileAvatar(
-                  profile: note.author.value,
-                  radius: 12,
-                  borderColors: colorPair,
-                ),
-                const SizedBox(width: 8.0),
-                Expanded(
-                  child: Text(
-                    note.author.value?.nameOrNpub ?? 'Anonymous',
-                    style: Theme.of(context).textTheme.bodyMedium!.copyWith(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w500,
+            GestureDetector(
+              onTap: onProfileTap != null
+                  ? () => onProfileTap!(note.event.pubkey)
+                  : null,
+              child: Row(
+                children: [
+                  ProfileAvatar(
+                    profile: note.author.value,
+                    radius: 12,
+                    borderColors: colorPair,
+                  ),
+                  const SizedBox(width: 8.0),
+                  Expanded(
+                    child: Text(
+                      note.author.value?.nameOrNpub ?? 'Anonymous',
+                      style: Theme.of(context).textTheme.bodyMedium!.copyWith(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w500,
+                      ),
                     ),
                   ),
-                ),
-                TimeAgoText(
-                  note.createdAt,
-                  style: Theme.of(
-                    context,
-                  ).textTheme.bodySmall!.copyWith(fontSize: 11),
-                ),
-              ],
+                  TimeAgoText(
+                    note.createdAt,
+                    style: Theme.of(
+                      context,
+                    ).textTheme.bodySmall!.copyWith(fontSize: 11),
+                  ),
+                ],
+              ),
             ),
             const SizedBox(height: 8.0),
             ParsedContentWidget(content: note.content, colorPair: colorPair),
@@ -504,11 +533,13 @@ class GenericNip19Widget extends StatelessWidget {
 class ParsedContentWidget extends StatelessWidget {
   final String content;
   final List<Color> colorPair;
+  final void Function(String pubkey)? onProfileTap;
 
   const ParsedContentWidget({
     super.key,
     required this.content,
     required this.colorPair,
+    this.onProfileTap,
   });
 
   @override
@@ -531,10 +562,14 @@ class ParsedContentWidget extends StatelessWidget {
         color: colorPair[0],
         decoration: TextDecoration.underline,
       ),
-      onNostrEntity: (entity) =>
-          NostrEntityWidget(entity: entity, colorPair: colorPair),
+      onNostrEntity: (entity) => NostrEntityWidget(
+        entity: entity,
+        colorPair: colorPair,
+        onProfileTap: onProfileTap,
+      ),
       onHttpUrl: (url) => UrlChipWidget(url: url, colorPair: colorPair),
       onMediaUrl: (url) => MediaWidget(url: url, colorPair: colorPair),
+      onProfileTap: onProfileTap,
     );
   }
 }
