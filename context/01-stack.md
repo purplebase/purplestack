@@ -24,7 +24,8 @@ Development stack designed for AI agents to build Nostr-enabled Flutter applicat
 - **percent_indicator**: Progress indicators
 - **easy_image_viewer**: Image viewing
 - **flutter_layout_grid**: Grid layouts
-- **permission_handler**: Runtime permissions
+
+**Important**: Flutter can produce binaries for a myriad of operating systems. **Assume the user wants an Android application (arm64-v8a), unless specifically asked otherwise**, take this into account when testing a build or launching a simulator.
 
 ## MCP Servers
 

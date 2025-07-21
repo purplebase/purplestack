@@ -159,12 +159,14 @@ The `query` provider has a filter-like API for querying Nostr events.
 ```dart
 import 'package:models/models.dart';
 
-final state = ref.watch(query<Note>(authors: {pubkey1}, limit: 10, source: LocalAndRemoteSource()));
+final state = ref.watch(query<Note>(authors: {pubkey1}, limit: 10));
 ```
 
 `query` takes an `and` operator which will instruct it to load relationships. If data is needed, it's always better to use a relationship than a separate query call.
 
 **Do not call query**, especially with many relationships inside loops! If you need relationship loading, use `and` and loop there - it will have the chance to optimize data loading and relay requests.
+
+Use the default `source` argument unless otherwise requested.
 
 See [#models 👯](#models-) reference below.
 
@@ -325,6 +327,95 @@ NoteParser.parse(
 - Graceful fallbacks when callbacks return `null`
 
 **Important**: Any time you display note content (kind 1, kind 11, kind 1111), you MUST use this instead of displaying raw text.
+
+### Displaying Engagement Information
+
+Use the `EngagementRow` widget to display social engagement metrics (likes, reposts, zaps, comments) for Nostr notes in a clean, Material 3 design.
+
+**Basic Usage:**
+
+```dart
+import 'package:purplestack/widgets/common/engagement_row.dart';
+
+// In your note card widget
+EngagementRow(
+  likesCount: note.reactions.length,
+  repostsCount: note.reposts.length, 
+  zapsCount: note.zaps.length,
+  zapsSatAmount: note.zaps.toList().fold(0, (sum, zap) => sum + zap.amount),
+  commentsCount: note.replies.length, // Optional
+)
+```
+
+**Interactive Engagement:**
+
+```dart
+EngagementRow(
+  likesCount: note.reactions.length,
+  repostsCount: note.reposts.length,
+  zapsCount: note.zaps.length,
+  zapsSatAmount: note.zaps.toList().fold(0, (sum, zap) => sum + zap.amount),
+  commentsCount: note.replies.length,
+  
+  // User interaction state
+  isLiked: userHasLiked,
+  isReposted: userHasReposted,
+  isZapped: userHasZapped,
+  
+  // Callbacks for user actions
+  onLike: () async {
+    final reaction = PartialReaction(
+      reactedOn: note,
+      emojiTag: ('+', null), // Standard like reaction
+    );
+    final signedReaction = await reaction.signWith(signer);
+    await ref.storage.publish({signedReaction});
+  },
+  
+  onRepost: () async {
+    final repost = PartialRepost(originalEvent: note);
+    final signedRepost = await repost.signWith(signer);
+    await ref.storage.publish({signedRepost});
+  },
+  
+  onZap: () {
+    // Handle zap action (open zap dialog, etc.)
+    showZapDialog(context, note);
+  },
+  
+  onComment: () {
+    // Navigate to reply screen or show comment composer
+    Navigator.push(context, ReplyScreen(parentNote: note));
+  },
+)
+```
+
+**Required Relationships:**
+
+When using `EngagementRow`, ensure your note query includes the necessary relationships:
+
+```dart
+final notesState = ref.watch(
+  query<Note>(
+    limit: 50,
+    and: (note) => {
+      note.author,      // For author info
+      note.reactions,   // For likes count
+      note.reposts,     // For reposts count  
+      note.zaps,        // For zaps count and sat amounts
+      note.replies,     // For comments count (optional)
+    },
+  ),
+);
+```
+
+**Features:**
+- **Smart formatting**: Large numbers display as "1.2K", "3.4M" etc.
+- **Active states**: Different colors when user has engaged
+- **Zap amounts**: Shows total sats if available, otherwise zap count
+- **Optional comments**: Include `commentsCount` to show reply count
+- **Material 3 design**: Consistent with app theming
+- **Tap targets**: Proper touch areas with ripple effects
 
 #### Use in Filters
 
@@ -612,13 +703,9 @@ await signer.initialize();
 // When app closes, private key is lost and user must re-enter
 ```
 
-#### Persistent Storage (Optional)
-If the user specifically requests persistent nsec signing, use the `flutter_secure_storage` package:
+#### Persistent Key Storage
 
-```dart
-dependencies:
-  flutter_secure_storage: ^9.0.0
-```
+If the user specifically requests persistent nsec signing, use the `flutter_secure_storage` package. Do NOT use this storage for regular data storage, use `CustomData` as instructed before.
 
 ```dart
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
