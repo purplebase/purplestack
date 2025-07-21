@@ -162,7 +162,13 @@ class NoteParser {
       }
 
       if (replacement != null) {
-        spans.add(WidgetSpan(child: replacement));
+        spans.add(
+          WidgetSpan(
+            child: replacement,
+            alignment: PlaceholderAlignment.baseline,
+            baseline: TextBaseline.alphabetic,
+          ),
+        );
       } else {
         // Fallback to styled text
         final style =
@@ -321,17 +327,19 @@ class ProfileEntityWidget extends ConsumerWidget {
 
     return GestureDetector(
       onTap: () => debugPrint('Navigate to profile: ${profileData.pubkey}'),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 4.0),
+      child: DecoratedBox(
         decoration: BoxDecoration(
           color: colorPair[0].withValues(alpha: 0.1),
           borderRadius: BorderRadius.circular(4.0),
         ),
-        child: Text(
-          displayName,
-          style: Theme.of(context).textTheme.bodyMedium!.copyWith(
-            fontWeight: FontWeight.w500,
-            color: colorPair[0],
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 4.0),
+          child: Text(
+            displayName,
+            style: Theme.of(context).textTheme.bodyMedium!.copyWith(
+              fontWeight: FontWeight.w500,
+              color: colorPair[0],
+            ),
           ),
         ),
       ),
@@ -438,17 +446,19 @@ class AddressEntityWidget extends StatelessWidget {
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: () => debugPrint('Navigate to address: ${addressData.identifier}'),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 4.0),
+      child: DecoratedBox(
         decoration: BoxDecoration(
           color: colorPair[0].withValues(alpha: 0.1),
           borderRadius: BorderRadius.circular(4.0),
         ),
-        child: Text(
-          addressData.identifier,
-          style: Theme.of(context).textTheme.bodyMedium!.copyWith(
-            fontWeight: FontWeight.w500,
-            color: colorPair[0],
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 4.0),
+          child: Text(
+            addressData.identifier,
+            style: Theme.of(context).textTheme.bodyMedium!.copyWith(
+              fontWeight: FontWeight.w500,
+              color: colorPair[0],
+            ),
           ),
         ),
       ),
@@ -468,17 +478,19 @@ class GenericNip19Widget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 4.0),
+    return DecoratedBox(
       decoration: BoxDecoration(
         color: colorPair[0].withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(4.0),
       ),
-      child: Text(
-        entity,
-        style: Theme.of(context).textTheme.bodyMedium!.copyWith(
-          fontWeight: FontWeight.w500,
-          color: colorPair[0],
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 4.0),
+        child: Text(
+          entity,
+          style: Theme.of(context).textTheme.bodyMedium!.copyWith(
+            fontWeight: FontWeight.w500,
+            color: colorPair[0],
+          ),
         ),
       ),
     );
@@ -534,19 +546,21 @@ class UrlChipWidget extends StatelessWidget {
     // Fallback widget for when preview fails
     Widget fallbackWidget = GestureDetector(
       onTap: () => _launchUrlSafely(url, context: 'Fallback'),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 4.0),
+      child: DecoratedBox(
         decoration: BoxDecoration(
           color: colorPair[0].withValues(alpha: 0.1),
           borderRadius: BorderRadius.circular(4.0),
         ),
-        child: Text(
-          url,
-          style: Theme.of(context).textTheme.bodyMedium!.copyWith(
-            color: colorPair[0],
-            decoration: TextDecoration.underline,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 4.0),
+          child: Text(
+            url,
+            style: Theme.of(context).textTheme.bodyMedium!.copyWith(
+              color: colorPair[0],
+              decoration: TextDecoration.underline,
+            ),
+            overflow: TextOverflow.ellipsis,
           ),
-          overflow: TextOverflow.ellipsis,
         ),
       ),
     );
