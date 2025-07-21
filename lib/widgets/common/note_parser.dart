@@ -16,37 +16,26 @@ enum MediaType { image, video, audio, none }
 /// Helper function to launch URLs with robust error handling
 Future<void> _launchUrlSafely(String url, {String? context}) async {
   try {
-    final prefix = context != null ? '$context: ' : '';
-    debugPrint('${prefix}Attempting to launch URL: $url');
-
     // Clean and validate the URL
     String cleanUrl = url.trim();
     if (!cleanUrl.startsWith('http://') && !cleanUrl.startsWith('https://')) {
       cleanUrl = 'https://$cleanUrl';
-      debugPrint('${prefix}Added https:// prefix. New URL: $cleanUrl');
     }
 
     final uri = Uri.parse(cleanUrl);
-    debugPrint('${prefix}Parsed URI: $uri');
 
     if (await canLaunchUrl(uri)) {
-      debugPrint('${prefix}canLaunchUrl returned true, launching...');
       await launchUrl(uri, mode: LaunchMode.externalApplication);
-      debugPrint('${prefix}Launch successful');
     } else {
-      debugPrint('${prefix}canLaunchUrl returned false for: $cleanUrl');
       // Try alternative launch mode
       try {
         await launchUrl(uri, mode: LaunchMode.platformDefault);
-        debugPrint('${prefix}Launch successful with platformDefault mode');
       } catch (e2) {
-        debugPrint('${prefix}Both launch modes failed: $e2');
+        // Silently fail - both launch modes failed
       }
     }
   } catch (e) {
-    final prefix = context != null ? '$context: ' : '';
-    debugPrint('${prefix}Error launching URL: $e');
-    debugPrint('${prefix}Original URL: $url');
+    // Silently handle URL launch errors
   }
 }
 
@@ -60,6 +49,12 @@ class NoteParser {
 
   static final RegExp _httpUrlPattern = RegExp(
     r'https?://[^\s<>"\[\]{}|\\^`]+',
+    caseSensitive: false,
+  );
+
+  // Hashtag pattern - matches #word (letters, numbers, underscores)
+  static final RegExp _hashtagPattern = RegExp(
+    r'#[a-zA-Z0-9_]+',
     caseSensitive: false,
   );
 
@@ -93,6 +88,7 @@ class NoteParser {
   /// [onNostrEntity] - Optional callback for replacing NIP-19 entities (npub, note, etc.)
   /// [onHttpUrl] - Optional callback for replacing HTTP URLs
   /// [onMediaUrl] - Optional callback specifically for media URLs (images, videos, etc.)
+  /// [onHashtag] - Optional callback for replacing hashtags (#hashtag)
   /// [onProfileTap] - Optional callback for when a profile is tapped
   /// [textStyle] - Default text style for regular text
   /// [linkStyle] - Text style for unhandled links (when callback returns null)
@@ -102,6 +98,7 @@ class NoteParser {
     Widget? Function(String entity)? onNostrEntity,
     Widget? Function(String httpUrl)? onHttpUrl,
     Widget? Function(String mediaUrl)? onMediaUrl,
+    Widget? Function(String hashtag)? onHashtag,
     void Function(String pubkey)? onProfileTap,
     TextStyle? textStyle,
     TextStyle? linkStyle,
@@ -145,6 +142,21 @@ class NoteParser {
       );
     }
 
+    // Find all hashtags
+    for (final match in _hashtagPattern.allMatches(content)) {
+      final hashtag = match.group(0)!;
+
+      matches.add(
+        _EntityMatch(
+          start: match.start,
+          end: match.end,
+          text: hashtag,
+          type: _EntityType.hashtag,
+          cleanEntity: hashtag.substring(1), // Remove the # symbol
+        ),
+      );
+    }
+
     // Sort matches by position
     matches.sort((a, b) => a.start.compareTo(b.start));
 
@@ -171,6 +183,9 @@ class NoteParser {
           break;
         case _EntityType.http:
           replacement = onHttpUrl?.call(match.text);
+          break;
+        case _EntityType.hashtag:
+          replacement = onHashtag?.call(match.cleanEntity);
           break;
       }
 
@@ -273,6 +288,16 @@ class NoteParser {
   static List<String> extractMediaUrls(String content) {
     return extractHttpUrls(content).where((url) => _isMediaUrl(url)).toList();
   }
+
+  /// Extracts all hashtags from text (without the # symbol)
+  @protected
+  @visibleForTesting
+  static List<String> extractHashtags(String content) {
+    return _hashtagPattern
+        .allMatches(content)
+        .map((match) => match.group(0)!.substring(1)) // Remove # symbol
+        .toList();
+  }
 }
 
 /// Internal class for tracking entity matches
@@ -293,7 +318,7 @@ class _EntityMatch {
 }
 
 /// Internal enum for entity types
-enum _EntityType { nip19, http, media }
+enum _EntityType { nip19, http, media, hashtag }
 
 // Widgets
 
@@ -518,7 +543,9 @@ class AddressEntityWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onTap: () => debugPrint('Navigate to address: ${addressData.identifier}'),
+      onTap: () {
+        // Handle address navigation
+      },
       child: DecoratedBox(
         decoration: BoxDecoration(
           color: colorPair[0].withValues(alpha: 0.1),
@@ -609,6 +636,8 @@ class ParsedContentWidget extends StatelessWidget {
       ),
       onHttpUrl: (url) => UrlChipWidget(url: url, colorPair: colorPair),
       onMediaUrl: (url) => MediaWidget(url: url, colorPair: colorPair),
+      onHashtag: (hashtag) =>
+          HashtagWidget(hashtag: hashtag, colorPair: colorPair),
       onProfileTap: onProfileTap,
     );
   }
@@ -1139,6 +1168,41 @@ class _AudioPlayerWidgetState extends State<AudioPlayerWidget> {
             size: 20,
           ),
         ],
+      ),
+    );
+  }
+}
+
+class HashtagWidget extends StatelessWidget {
+  final String hashtag;
+  final List<Color> colorPair;
+
+  const HashtagWidget({
+    super.key,
+    required this.hashtag,
+    required this.colorPair,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: () {
+        // Handle hashtag tap - could navigate to hashtag feed or trigger search
+        // For now, we'll just do nothing but provide a tap target
+      },
+      child: Container(
+        decoration: BoxDecoration(
+          color: colorPair[0].withValues(alpha: 0.1),
+          borderRadius: BorderRadius.circular(4.0),
+        ),
+        padding: const EdgeInsets.symmetric(horizontal: 4.0, vertical: 1.0),
+        child: Text(
+          '#$hashtag',
+          style: Theme.of(context).textTheme.bodyMedium!.copyWith(
+            color: colorPair[0],
+            fontWeight: FontWeight.w500,
+          ),
+        ),
       ),
     );
   }

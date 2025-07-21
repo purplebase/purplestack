@@ -91,6 +91,64 @@ void main() {
       });
     });
 
+    group('extractHashtags', () {
+      test('should extract single hashtag', () {
+        const content = 'Hello #nostr world!';
+        final hashtags = NoteParser.extractHashtags(content);
+
+        expect(hashtags.length, 1);
+        expect(hashtags[0], 'nostr');
+      });
+
+      test('should extract multiple hashtags', () {
+        const content = 'Love #bitcoin and #nostr #decentralized networks!';
+        final hashtags = NoteParser.extractHashtags(content);
+
+        expect(hashtags.length, 3);
+        expect(hashtags[0], 'bitcoin');
+        expect(hashtags[1], 'nostr');
+        expect(hashtags[2], 'decentralized');
+      });
+
+      test('should extract hashtags with numbers and underscores', () {
+        const content = 'Check out #test_hashtag and #bitcoin21 and #web3_0';
+        final hashtags = NoteParser.extractHashtags(content);
+
+        expect(hashtags.length, 3);
+        expect(hashtags[0], 'test_hashtag');
+        expect(hashtags[1], 'bitcoin21');
+        expect(hashtags[2], 'web3_0');
+      });
+
+      test('should not extract standalone # symbol', () {
+        const content = 'This is just a # symbol without text';
+        final hashtags = NoteParser.extractHashtags(content);
+
+        expect(hashtags.isEmpty, true);
+      });
+
+      test('should handle hashtags at different positions', () {
+        const content = '#start hashtag and middle #tag and #end';
+        final hashtags = NoteParser.extractHashtags(content);
+
+        expect(hashtags.length, 3);
+        expect(hashtags[0], 'start');
+        expect(hashtags[1], 'tag');
+        expect(hashtags[2], 'end');
+      });
+
+      test('should not extract hashtags with spaces or special characters', () {
+        const content = 'Not valid: #hash tag or #hash@tag or #hash-tag';
+        final hashtags = NoteParser.extractHashtags(content);
+
+        // Only the part before the special character should be extracted
+        expect(hashtags.length, 3);
+        expect(hashtags[0], 'hash');
+        expect(hashtags[1], 'hash');
+        expect(hashtags[2], 'hash');
+      });
+    });
+
     group('isValidNip19Entity', () {
       test('should validate real NIP-19 entities', () {
         // These would need to be real entities in a full test
