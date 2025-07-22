@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:models/models.dart';
+import 'package:skeletonizer/skeletonizer.dart';
 import 'package:purplestack/widgets/common/time_utils.dart';
 import 'package:purplestack/widgets/common/profile_avatar.dart';
 import 'package:any_link_preview/any_link_preview.dart';
@@ -42,12 +43,12 @@ Future<void> _launchUrlSafely(String url, {String? context}) async {
 /// A utility for parsing Nostr note content and replacing entities with custom widgets.
 class NoteParser {
   // Regex patterns for different content types
-  static final RegExp _nip19Regex = RegExp(
+  static final RegExp nip19Regex = RegExp(
     r'(?:nostr:)?(npub|nsec|note|nprofile|nevent|naddr|nrelay)1[02-9ac-hj-np-z]+',
     caseSensitive: false,
   );
 
-  static final RegExp _httpUrlPattern = RegExp(
+  static final RegExp httpUrlPattern = RegExp(
     r'https?://[^\s<>"\[\]{}|\\^`]+',
     caseSensitive: false,
   );
@@ -113,7 +114,7 @@ class NoteParser {
     final List<_EntityMatch> matches = [];
 
     // Find all NIP-19 entities
-    for (final match in _nip19Regex.allMatches(content)) {
+    for (final match in nip19Regex.allMatches(content)) {
       final entity = match.group(0)!;
       final nip19Entity = entity.replaceFirst('nostr:', '');
 
@@ -129,7 +130,7 @@ class NoteParser {
     }
 
     // Find all HTTP URLs
-    for (final match in _httpUrlPattern.allMatches(content)) {
+    for (final match in httpUrlPattern.allMatches(content)) {
       final url = match.group(0)!;
       final isMedia = _isMediaUrl(url);
 
@@ -278,7 +279,7 @@ class NoteParser {
   @protected
   @visibleForTesting
   static List<String> extractNip19Entities(String content) {
-    return _nip19Regex
+    return nip19Regex
         .allMatches(content)
         .map((match) => match.group(0)!.replaceFirst('nostr:', ''))
         .where((entity) => isValidNip19Entity(entity))
@@ -289,7 +290,7 @@ class NoteParser {
   @protected
   @visibleForTesting
   static List<String> extractHttpUrls(String content) {
-    return _httpUrlPattern
+    return httpUrlPattern
         .allMatches(content)
         .map((match) => match.group(0)!)
         .toList();
@@ -396,6 +397,37 @@ class ProfileEntityWidget extends ConsumerWidget {
     );
 
     final profile = profileState.models.firstOrNull;
+
+    // Show skeleton loading when profile is being loaded
+    if (profileState is StorageLoading ||
+        (profile == null && profileState is StorageData)) {
+      return GestureDetector(
+        onTap: onProfileTap != null
+            ? () => onProfileTap!(profileData.pubkey)
+            : null,
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            color: colorPair[0].withValues(alpha: 0.1),
+            borderRadius: BorderRadius.circular(4.0),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 4.0),
+            child: Skeletonizer(
+              enabled: true,
+              child: Container(
+                width: 80,
+                height: 16,
+                decoration: BoxDecoration(
+                  color: Theme.of(context).colorScheme.surfaceContainerHighest,
+                  borderRadius: BorderRadius.circular(4),
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+    }
+
     final displayName =
         profile?.nameOrNpub ?? '${profileData.pubkey.substring(0, 8)}...';
 
@@ -452,37 +484,107 @@ class EventEntityWidget extends ConsumerWidget {
     if (note == null) {
       return Container(
         margin: const EdgeInsets.symmetric(vertical: 8.0),
-        padding: const EdgeInsets.all(16.0),
         decoration: BoxDecoration(
-          color: Theme.of(context).colorScheme.surfaceContainer,
+          color: Theme.of(context).colorScheme.surfaceContainerLowest,
           borderRadius: BorderRadius.circular(12.0),
           border: Border.all(
-            color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.3),
+            color: colorPair[0].withValues(alpha: 0.2),
+            width: 1.0,
           ),
-        ),
-        child: Row(
-          children: [
-            SizedBox(
-              width: 16,
-              height: 16,
-              child: CircularProgressIndicator(
-                strokeWidth: 2,
-                color: colorPair[0],
-              ),
-            ),
-            const SizedBox(width: 8.0),
-            Expanded(
-              child: Text(
-                'Loading note (${eventData.eventId.substring(0, 8)}...)',
-                style: Theme.of(context).textTheme.bodySmall!.copyWith(
-                  fontStyle: FontStyle.italic,
-                  color: Theme.of(
-                    context,
-                  ).colorScheme.onSurface.withValues(alpha: 0.7),
-                ),
-              ),
+          boxShadow: [
+            BoxShadow(
+              color: colorPair[0].withValues(alpha: 0.05),
+              blurRadius: 4.0,
+              offset: const Offset(0, 2),
             ),
           ],
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Skeleton for author info
+              Row(
+                children: [
+                  Skeletonizer(
+                    enabled: true,
+                    child: Container(
+                      width: 24,
+                      height: 24,
+                      decoration: BoxDecoration(
+                        color: Theme.of(
+                          context,
+                        ).colorScheme.surfaceContainerHighest,
+                        shape: BoxShape.circle,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8.0),
+                  Expanded(
+                    child: Skeletonizer(
+                      enabled: true,
+                      child: Container(
+                        width: 100,
+                        height: 13,
+                        decoration: BoxDecoration(
+                          color: Theme.of(
+                            context,
+                          ).colorScheme.surfaceContainerHighest,
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                      ),
+                    ),
+                  ),
+                  Skeletonizer(
+                    enabled: true,
+                    child: Container(
+                      width: 40,
+                      height: 11,
+                      decoration: BoxDecoration(
+                        color: Theme.of(
+                          context,
+                        ).colorScheme.surfaceContainerHighest,
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8.0),
+
+              // Skeleton for note content
+              Skeletonizer(
+                enabled: true,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Container(
+                      width: double.infinity,
+                      height: 14,
+                      decoration: BoxDecoration(
+                        color: Theme.of(
+                          context,
+                        ).colorScheme.surfaceContainerHighest,
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Container(
+                      width: MediaQuery.of(context).size.width * 0.7,
+                      height: 14,
+                      decoration: BoxDecoration(
+                        color: Theme.of(
+                          context,
+                        ).colorScheme.surfaceContainerHighest,
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
         ),
       );
     }
@@ -522,13 +624,28 @@ class EventEntityWidget extends ConsumerWidget {
                   ),
                   const SizedBox(width: 8.0),
                   Expanded(
-                    child: Text(
-                      note.author.value?.nameOrNpub ?? 'Anonymous',
-                      style: Theme.of(context).textTheme.bodyMedium!.copyWith(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
+                    child: note.author.value?.nameOrNpub != null
+                        ? Text(
+                            note.author.value!.nameOrNpub,
+                            style: Theme.of(context).textTheme.bodyMedium!
+                                .copyWith(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                          )
+                        : Skeletonizer(
+                            enabled: true,
+                            child: Container(
+                              width: 80,
+                              height: 13,
+                              decoration: BoxDecoration(
+                                color: Theme.of(
+                                  context,
+                                ).colorScheme.surfaceContainerHighest,
+                                borderRadius: BorderRadius.circular(4),
+                              ),
+                            ),
+                          ),
                   ),
                   TimeAgoText(
                     note.createdAt,
@@ -541,7 +658,7 @@ class EventEntityWidget extends ConsumerWidget {
             ),
             const SizedBox(height: 8.0),
             ParsedContentWidget(
-              content: note.content,
+              note: note,
               colorPair: colorPair,
               onProfileTap: onProfileTap,
               onHashtagTap: onHashtagTap,
@@ -620,23 +737,44 @@ class GenericNip19Widget extends StatelessWidget {
   }
 }
 
-class ParsedContentWidget extends StatelessWidget {
-  final String content;
+class ParsedContentWidget extends ConsumerWidget {
+  final Note note;
   final List<Color> colorPair;
   final void Function(String pubkey)? onProfileTap;
   final void Function(String hashtag)? onHashtagTap;
 
   const ParsedContentWidget({
     super.key,
-    required this.content,
+    required this.note,
     required this.colorPair,
     this.onProfileTap,
     this.onHashtagTap,
   });
 
   @override
-  Widget build(BuildContext context) {
-    if (content.trim().isEmpty) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Reply context - show if this note is a reply
+        if (note.replyTo.value != null) ...[
+          ReplyContextWidget(
+            replyingNote: note,
+            colorPair: colorPair,
+            onProfileTap: onProfileTap,
+            onHashtagTap: onHashtagTap,
+          ),
+          const SizedBox(height: 8),
+        ],
+
+        // Original note content
+        _buildNoteContent(context),
+      ],
+    );
+  }
+
+  Widget _buildNoteContent(BuildContext context) {
+    if (note.content.trim().isEmpty) {
       return Text(
         'No content',
         style: Theme.of(context).textTheme.bodyMedium!.copyWith(
@@ -648,11 +786,228 @@ class ParsedContentWidget extends StatelessWidget {
 
     return NoteParser.parse(
       context,
-      content,
+      note.content,
       textStyle: Theme.of(context).textTheme.bodyMedium,
       linkStyle: Theme.of(context).textTheme.bodyMedium!.copyWith(
         color: colorPair[0],
         decoration: TextDecoration.underline,
+      ),
+      onNostrEntity: (entity) => NostrEntityWidget(
+        entity: entity,
+        colorPair: colorPair,
+        onProfileTap: onProfileTap,
+        onHashtagTap: onHashtagTap,
+      ),
+      onHttpUrl: (url) => UrlChipWidget(url: url, colorPair: colorPair),
+      onMediaUrl: (url) => MediaWidget(url: url, colorPair: colorPair),
+      onHashtagTap: onHashtagTap,
+      onProfileTap: onProfileTap,
+    );
+  }
+}
+
+/// Internal widget for reply context - now part of the note parser
+class ReplyContextWidget extends ConsumerWidget {
+  final Note replyingNote;
+  final List<Color> colorPair;
+  final void Function(String pubkey)? onProfileTap;
+  final void Function(String hashtag)? onHashtagTap;
+
+  const ReplyContextWidget({
+    super.key,
+    required this.replyingNote,
+    required this.colorPair,
+    this.onProfileTap,
+    this.onHashtagTap,
+  });
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final replyToNote = replyingNote.replyTo.value;
+
+    if (replyToNote == null) {
+      return const SizedBox.shrink();
+    }
+
+    // Load the author for the replyTo note
+    final authorState = ref.watch(
+      query<Profile>(authors: {replyToNote.event.pubkey}, limit: 1),
+    );
+
+    final author = authorState.models.firstOrNull;
+    final isAuthorLoading =
+        authorState is StorageLoading ||
+        (author == null && authorState is StorageData);
+
+    // Check if the reply-to note itself is still being loaded
+    final replyToNoteState = ref.watch(
+      query<Note>(ids: {replyToNote.event.id}, limit: 1),
+    );
+
+    final isNoteLoading = replyToNoteState is StorageLoading;
+
+    return Container(
+      padding: const EdgeInsets.all(12.0),
+      decoration: BoxDecoration(
+        color: Theme.of(
+          context,
+        ).colorScheme.surfaceContainer.withValues(alpha: 0.3),
+        borderRadius: BorderRadius.circular(8.0),
+        border: Border.all(
+          color: colorPair[0].withValues(alpha: 0.2),
+          width: 1.0,
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // "Replying to" indicator
+          Row(
+            children: [
+              Icon(
+                Icons.reply,
+                size: 14,
+                color: colorPair[0].withValues(alpha: 0.7),
+              ),
+              const SizedBox(width: 4),
+              Text(
+                'Replying to',
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: colorPair[0].withValues(alpha: 0.7),
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+
+          // Parent note preview
+          Container(
+            padding: const EdgeInsets.all(12.0),
+            decoration: BoxDecoration(
+              color: Theme.of(context).colorScheme.surface,
+              borderRadius: BorderRadius.circular(6.0),
+              border: Border.all(
+                color: Theme.of(
+                  context,
+                ).colorScheme.outline.withValues(alpha: 0.2),
+              ),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Parent note author
+                GestureDetector(
+                  onTap: onProfileTap != null
+                      ? () => onProfileTap!(replyToNote.event.pubkey)
+                      : null,
+                  child: Row(
+                    children: [
+                      ProfileAvatar(
+                        profile: author,
+                        radius: 10,
+                        borderColors: colorPair,
+                      ),
+                      const SizedBox(width: 6),
+                      Expanded(
+                        child: isAuthorLoading || isNoteLoading
+                            ? Skeletonizer(
+                                enabled: true,
+                                child: Container(
+                                  width: 60,
+                                  height: 12,
+                                  decoration: BoxDecoration(
+                                    color: Theme.of(
+                                      context,
+                                    ).colorScheme.surfaceContainerHighest,
+                                    borderRadius: BorderRadius.circular(4),
+                                  ),
+                                ),
+                              )
+                            : Text(
+                                author?.nameOrNpub ??
+                                    '${replyToNote.event.pubkey.substring(0, 8)}...',
+                                style: Theme.of(context).textTheme.bodySmall
+                                    ?.copyWith(
+                                      fontWeight: FontWeight.w500,
+                                      fontSize: 12,
+                                    ),
+                              ),
+                      ),
+                      TimeAgoText(
+                        replyToNote.createdAt,
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          fontSize: 11,
+                          color: Theme.of(
+                            context,
+                          ).colorScheme.onSurface.withValues(alpha: 0.6),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 6),
+
+                // Parent note content with proper loading state handling
+                isNoteLoading || isAuthorLoading
+                    ? Skeletonizer(
+                        enabled: true,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Container(
+                              width: double.infinity,
+                              height: 12,
+                              decoration: BoxDecoration(
+                                color: Theme.of(
+                                  context,
+                                ).colorScheme.surfaceContainerHighest,
+                                borderRadius: BorderRadius.circular(4),
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Container(
+                              width: MediaQuery.of(context).size.width * 0.6,
+                              height: 12,
+                              decoration: BoxDecoration(
+                                color: Theme.of(
+                                  context,
+                                ).colorScheme.surfaceContainerHighest,
+                                borderRadius: BorderRadius.circular(4),
+                              ),
+                            ),
+                          ],
+                        ),
+                      )
+                    : replyToNote.content.trim().isEmpty
+                    ? Text(
+                        'No content',
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          fontStyle: FontStyle.italic,
+                          color: Theme.of(
+                            context,
+                          ).colorScheme.onSurface.withValues(alpha: 0.5),
+                          fontSize: 12,
+                        ),
+                      )
+                    : _buildFullContent(context, replyToNote.content),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildFullContent(BuildContext context, String content) {
+    return NoteParser.parse(
+      context,
+      content,
+      textStyle: Theme.of(context).textTheme.bodySmall?.copyWith(fontSize: 12),
+      linkStyle: Theme.of(context).textTheme.bodySmall?.copyWith(
+        color: colorPair[0],
+        decoration: TextDecoration.underline,
+        fontSize: 12,
       ),
       onNostrEntity: (entity) => NostrEntityWidget(
         entity: entity,
