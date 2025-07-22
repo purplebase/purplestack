@@ -5,8 +5,8 @@ packages:
     dependency: "direct main"
     description:
       path: "."
-      ref: main
-      resolved-ref: "817586f4ba3fb6034f47494eb820eddbdd1a74ad"
+      ref: b5e2a57
+      resolved-ref: b5e2a5718bfb206dc7f113bddf3e9ffc5864ee35
       url: "https://github.com/purplebase/amber_signer"
     source: git
     version: "0.1.0"
@@ -501,10 +501,10 @@ packages:
     dependency: transitive
     description:
       name: logger
-      sha256: "2621da01aabaf223f8f961e751f2c943dbb374dc3559b982f200ccedadaa6999"
+      sha256: "55d6c23a6c15db14920e037fe7e0dc32e7cdaf3b64b4b25df2d541b5b6b81c0c"
       url: "https://pub.dev"
     source: hosted
-    version: "2.6.0"
+    version: "2.6.1"
   logging:
     dependency: transitive
     description:
@@ -549,11 +549,11 @@ packages:
     dependency: "direct main"
     description:
       path: "."
-      ref: main
-      resolved-ref: b70b9c6d731342eb069a60de71bc6437b4784958
+      ref: "501c8cf"
+      resolved-ref: "501c8cf4d5d3ba23fec417820ba7fe25ca7cd339"
       url: "https://github.com/purplebase/models"
     source: git
-    version: "0.3.1"
+    version: "0.3.2"
   nested:
     dependency: transitive
     description:
@@ -719,11 +719,11 @@ packages:
     dependency: "direct main"
     description:
       path: "."
-      ref: master
-      resolved-ref: "4de8fe76f0c4321b0571b8cab1e0ad8bd9254668"
+      ref: "872df96"
+      resolved-ref: "872df965d97e8b35d7d62f54e0ac9075af07095e"
       url: "https://github.com/purplebase/purplebase"
     source: git
-    version: "0.3.1"
+    version: "0.3.2"
   quiver:
     dependency: transitive
     description:
@@ -910,10 +910,10 @@ packages:
     dependency: transitive
     description:
       name: sqlite3
-      sha256: c0503c69b44d5714e6abbf4c1f51a3c3cc42b75ce785f44404765e4635481d38
+      sha256: "608b56d594e4c8498c972c8f1507209f9fd74939971b948ddbbfbfd1c9cb3c15"
       url: "https://pub.dev"
     source: hosted
-    version: "2.7.6"
+    version: "2.7.7"
   sqlite3_flutter_libs:
     dependency: "direct main"
     description:
