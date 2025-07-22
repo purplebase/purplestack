@@ -39,6 +39,34 @@ Development stack designed for AI agents to build Nostr-enabled Flutter applicat
 
 **Important**: Flutter can produce binaries for a myriad of operating systems. **Assume the user wants an Android application (arm64-v8a), unless specifically asked otherwise**, take this into account when testing a build or launching a simulator.
 
+## Development Tools & Package Management
+
+### FVM (Flutter Version Management)
+
+When `fvm` is available, always use it for Flutter commands to ensure consistent Flutter version usage across development:
+
+```bash
+# Use fvm flutter instead of direct flutter commands
+fvm flutter run
+fvm flutter build
+fvm flutter analyze
+```
+
+### Package Management
+
+Always manage packages via the CLI to ensure latest compatible versions are resolved:
+
+```bash
+# Adding packages
+fvm dart pub add package_name
+
+# Removing packages  
+fvm dart pub remove package_name
+
+# Getting dependencies
+fvm dart pub get
+```
+
 ## MCP Servers
 
 There are included MCP servers that you MUST use them appropriately:
@@ -526,6 +554,114 @@ When users specify color schemes, use Material 3's color system:
 - Implement responsive design with breakpoints
 - Add hover and focus states for interactive elements
 
+### Async Operations & User Feedback
+
+**Use `async_button_builder` for all async operations** to provide proper user feedback and prevent multiple simultaneous operations.
+
+#### When to Use async_button_builder
+
+Use `async_button_builder` for:
+- **Authentication operations**: Sign in, sign out, account switching
+- **Network operations**: Posting notes, liking, reposting, zapping
+- **File operations**: Uploading media, processing files
+- **Any operation that takes >500ms**: Long-running computations, API calls
+
+#### Basic Usage Pattern
+
+```dart
+import 'package:async_button_builder/async_button_builder.dart';
+
+// For icon buttons
+AsyncButtonBuilder(
+  child: const Icon(Icons.favorite),
+  onPressed: () async {
+    // Your async operation
+    await performLike();
+  },
+  builder: (context, child, callback, buttonState) {
+    return IconButton(
+      icon: buttonState.maybeWhen(
+        loading: () => const SizedBox(
+          width: 20,
+          height: 20,
+          child: CircularProgressIndicator(strokeWidth: 2),
+        ),
+        orElse: () => child,
+      ),
+      onPressed: buttonState.maybeWhen(
+        loading: () => null, // Disable during loading
+        orElse: () => callback,
+      ),
+    );
+  },
+  onError: () {
+    // Show error feedback
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('Operation failed')),
+    );
+  },
+)
+
+// For filled buttons
+AsyncButtonBuilder(
+  child: Text('Sign In'),
+  onPressed: () async {
+    await signInWithAmber();
+  },
+  builder: (context, child, callback, buttonState) {
+    return FilledButton(
+      onPressed: buttonState.maybeWhen(
+        loading: () => null,
+        orElse: () => callback,
+      ),
+      child: buttonState.maybeWhen(
+        loading: () => const SizedBox(
+          width: 20,
+          height: 20,
+          child: CircularProgressIndicator(strokeWidth: 2),
+        ),
+        orElse: () => child,
+      ),
+    );
+  },
+)
+```
+
+#### Integration with Custom Components
+
+For custom components that handle async operations (like `EngagementRow`), add loading state parameters:
+
+```dart
+// Component with loading states
+EngagementRow(
+  likesCount: note.reactions.length,
+  isLiked: userHasLiked,
+  isLiking: _isLiking, // Track loading state
+  onLike: () async {
+    setState(() => _isLiking = true);
+    try {
+      await performLike();
+    } finally {
+      setState(() => _isLiking = false);
+    }
+  },
+)
+```
+
+#### Error Handling Best Practices
+
+- **Show user-friendly error messages**: Avoid technical error details
+- **Use SnackBar for temporary feedback**: Brief, non-intrusive notifications
+- **Handle network failures gracefully**: Provide retry options when appropriate
+- **Prevent multiple simultaneous operations**: Disable buttons during loading
+
+#### Benefits
+
+- **Better UX**: Users see immediate feedback that their action was received
+- **Prevents double-taps**: Loading states disable buttons automatically  
+- **Consistent behavior**: Standardized loading and error patterns across the app
+- **Accessibility**: Screen readers can announce loading states
+
 ## Icons launcher
 
 Used to create icons for all platforms.
@@ -579,13 +715,18 @@ icons_launcher:
 - The app architecture is local-first: All data is pulled from local storage, which is continually sync'ed from remote sources
 - Uses the `models` package, via Purplebase package that implements the local-first architecture
 - State management:
-  - Global and inter-component state uses Riverpod providers (use in `ConsumerWidget`)
-  - Local, intra-component state uses Flutter Hooks (use in `HookWidget` or `HookConsumerWidget` if it also reads providers)
+  - **Always use `flutter_hooks` for widget-local state** - Use `HookWidget` or `HookConsumerWidget`
+  - **Use Riverpod providers for all other state** - Global and inter-component state uses `ConsumerWidget`
+  - **Never use StatefulWidgets** - Hooks provide better composition and testing
   - Do not create simple wrappers around providers, i.e. wrapping one other provider without adding any value
 - Component-based architecture, with shared components in `lib/widgets`
 - Follows Material 3 design system and component patterns
 - Keep widgets of small or medium size and focused
 - Use Dart constants for magic numbers and strings (`kConstant`)
+
+### Git Guidelines
+
+**NEVER commit code changes on behalf of the user.** Always let the user review and commit their own changes. This ensures they maintain control over their git history and can review all changes before they become permanent.
 
 ### Common Widget Architecture
 
@@ -777,6 +918,8 @@ Assertions/expects in tests should be as detailed as possible, that is, do not s
 - **NoteParser**: REQUIRED for displaying any note content - never display raw note text
   - ⚠️ **This is a generic component in `/common/` - never modify with app-specific behavior**
 
+**Always use available MCP servers before searching the web.** The project includes MCP servers for development tasks and Nostr protocol reference - these should be your first resource for information and debugging.
+
 **Time Formatting Guidelines:**
 - Use `TimeAgoText` for timestamps that need to auto-update (feeds, chats, live content)
 - Use `TimeUtils.formatTimestamp()` for static displays that don't need updates
@@ -806,6 +949,8 @@ Text(TimeUtils.formatTimestamp(note.createdAt))
 ## Nostr Protocol Integration
 
 This project uses the `models` and `purplebase` packages which are the ONLY way to interact with the nostr network.
+
+**Always prioritize using models over the underlying `model.event` property.** Models provide rich methods, relationships, and domain-specific functionality. Only access the raw `event` property when model methods are insufficient or missing - for example, accessing custom tags not yet supported by the model interface.
 
 ### Nostr Implementation Guidelines
 
@@ -967,6 +1112,17 @@ import 'package:models/models.dart';
 final state = ref.watch(query<Note>(authors: {pubkey1}, limit: 10));
 ```
 
+**Use `ref.storage` extension instead of `read(storageNotifierProvider.notifier)`.** This provides a cleaner API for storage operations:
+
+```dart
+// ✅ Preferred - clean extension syntax
+await ref.storage.save({model});
+await ref.storage.publish({model});
+
+// ❌ Avoid - verbose provider syntax  
+await ref.read(storageNotifierProvider.notifier).save({model});
+```
+
 `query` takes an `and` operator which will instruct it to load relationships. If data is needed, it's always better to use a relationship than a separate query call.
 
 **Do not call query**, especially with many relationships inside loops! If you need relationship loading, use `and` and loop there - it will have the chance to optimize data loading and relay requests.
@@ -1030,7 +1186,7 @@ class SignInScreen extends ConsumerWidget {
         children: [
           if (pubkey == null) ...[
             ElevatedButton(
-              onPressed: () => ref.read(amberSignerProvider).initialize(),
+              onPressed: () => ref.read(amberSignerProvider).signIn(),
               child: const Text('Sign In'),
             ),
           ] else ...[
@@ -1040,7 +1196,7 @@ class SignInScreen extends ConsumerWidget {
             Text(
                 '${pubkey.substring(0, 8)}...${pubkey.substring(pubkey.length - 8)}'),
             ElevatedButton(
-              onPressed: () => ref.read(amberSignerProvider).dispose(),
+              onPressed: () => ref.read(amberSignerProvider).signOut(),
               child: const Text('Sign Out'),
             ),
           ],
@@ -1053,11 +1209,39 @@ class SignInScreen extends ConsumerWidget {
 final amberSignerProvider = Provider<AmberSigner>(AmberSigner.new);
 ```
 
+**Auto Sign-In (Recommended):**
+
+For a better user experience, you can attempt to automatically sign in the user if they have previously authorized your app with Amber. This should be called in your app's initializer after the storage initialization:
+
+```dart
+// After initialization
+await ref.read(initializationProvider(StorageConfiguration()).future);
+await ref.read(amberSignerProvider).attemptAutoSignIn();
+```
+
+This method will silently attempt to restore the user's previous session without requiring user interaction.
+
 See "Signer Interface & Authentication" in the [#models 👯](#models-) reference below for more.
 
 ### Publishing
 
 To publish events, use `storage.publish(...)` in any callback.
+
+**Important**: `storage.save()` and `storage.publish()` are independent operations. If you need both local storage AND relay publishing, both methods must be called:
+
+```dart
+// ✅ Save locally AND publish to relays
+await ref.storage.save({signedEvent});
+await ref.storage.publish({signedEvent});
+
+// ❌ Wrong - only saves locally, doesn't publish to relays
+await ref.storage.save({signedEvent});
+
+// ❌ Wrong - only publishes to relays, doesn't save locally
+await ref.storage.publish({signedEvent});
+```
+
+Use `save()` for local-only operations and `publish()` for relay distribution. Most user actions require both to ensure data availability offline and online.
 
 ### `npub`, `naddr`, and other Nostr addresses
 
@@ -1510,7 +1694,7 @@ By default, private keys (nsec) are handled in-memory only when using `Bip340Pri
 ```dart
 // Private key is only stored in memory during app session
 final signer = Bip340PrivateKeySigner(privateKeyHex, ref);
-await signer.initialize();
+await signer.signIn();
 
 // When app closes, private key is lost and user must re-enter
 ```
@@ -1964,10 +2148,11 @@ The signer system manages authentication and signing across your app.
 final privateKey = 'your_private_key_here';
 final signer = Bip340PrivateKeySigner(privateKey, ref);
 
-// Initialize (sets the pubkey as active)
-await signer.initialize();
+// Sign in (sets the pubkey as active)
+await signer.signIn();
 
-// Check if signer is available for use
+// Check if signer is signed in and available for use
+final isSignedIn = signer.isSignedIn;
 final isAvailable = await signer.isAvailable;
 
 // Watch the active profile (use RemoteSource() if you want to fetch from relays)
@@ -1982,12 +2167,12 @@ final activePubkey = ref.watch(Signer.activePubkeyProvider);
 final signer1 = Bip340PrivateKeySigner(privateKey1, ref);
 final signer2 = Bip340PrivateKeySigner(privateKey2, ref);
 
-await signer1.initialize(active: false); // Don't set as active
-await signer2.initialize(active: true);  // Set as active
+await signer1.signIn(setAsActive: false); // Don't set as active
+await signer2.signIn(setAsActive: true);  // Set as active
 
 // Switch between accounts
-signer1.setActive();
-signer2.removeActive();
+await signer1.setAsActivePubkey();
+await signer2.removeAsActivePubkey();
 
 // Get all signed-in accounts
 final signedInPubkeys = ref.watch(Signer.signedInPubkeysProvider);
@@ -2014,7 +2199,7 @@ The [amber_signer](https://github.com/purplebase/amber_signer) package implement
 
 ```dart
 // Clean up when user signs out
-await signer.dispose();
+await signer.signOut();
 
 // The active profile provider will automatically update
 // as the signer is removed from the system

@@ -39,6 +39,34 @@ Development stack designed for AI agents to build Nostr-enabled Flutter applicat
 
 **Important**: Flutter can produce binaries for a myriad of operating systems. **Assume the user wants an Android application (arm64-v8a), unless specifically asked otherwise**, take this into account when testing a build or launching a simulator.
 
+## Development Tools & Package Management
+
+### FVM (Flutter Version Management)
+
+When `fvm` is available, always use it for Flutter commands to ensure consistent Flutter version usage across development:
+
+```bash
+# Use fvm flutter instead of direct flutter commands
+fvm flutter run
+fvm flutter build
+fvm flutter analyze
+```
+
+### Package Management
+
+Always manage packages via the CLI to ensure latest compatible versions are resolved:
+
+```bash
+# Adding packages
+fvm dart pub add package_name
+
+# Removing packages  
+fvm dart pub remove package_name
+
+# Getting dependencies
+fvm dart pub get
+```
+
 ## MCP Servers
 
 There are included MCP servers that you MUST use them appropriately:
@@ -525,6 +553,114 @@ When users specify color schemes, use Material 3's color system:
 - Use theme-based styling: `Theme.of(context).colorScheme.primary`
 - Implement responsive design with breakpoints
 - Add hover and focus states for interactive elements
+
+### Async Operations & User Feedback
+
+**Use `async_button_builder` for all async operations** to provide proper user feedback and prevent multiple simultaneous operations.
+
+#### When to Use async_button_builder
+
+Use `async_button_builder` for:
+- **Authentication operations**: Sign in, sign out, account switching
+- **Network operations**: Posting notes, liking, reposting, zapping
+- **File operations**: Uploading media, processing files
+- **Any operation that takes >500ms**: Long-running computations, API calls
+
+#### Basic Usage Pattern
+
+```dart
+import 'package:async_button_builder/async_button_builder.dart';
+
+// For icon buttons
+AsyncButtonBuilder(
+  child: const Icon(Icons.favorite),
+  onPressed: () async {
+    // Your async operation
+    await performLike();
+  },
+  builder: (context, child, callback, buttonState) {
+    return IconButton(
+      icon: buttonState.maybeWhen(
+        loading: () => const SizedBox(
+          width: 20,
+          height: 20,
+          child: CircularProgressIndicator(strokeWidth: 2),
+        ),
+        orElse: () => child,
+      ),
+      onPressed: buttonState.maybeWhen(
+        loading: () => null, // Disable during loading
+        orElse: () => callback,
+      ),
+    );
+  },
+  onError: () {
+    // Show error feedback
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('Operation failed')),
+    );
+  },
+)
+
+// For filled buttons
+AsyncButtonBuilder(
+  child: Text('Sign In'),
+  onPressed: () async {
+    await signInWithAmber();
+  },
+  builder: (context, child, callback, buttonState) {
+    return FilledButton(
+      onPressed: buttonState.maybeWhen(
+        loading: () => null,
+        orElse: () => callback,
+      ),
+      child: buttonState.maybeWhen(
+        loading: () => const SizedBox(
+          width: 20,
+          height: 20,
+          child: CircularProgressIndicator(strokeWidth: 2),
+        ),
+        orElse: () => child,
+      ),
+    );
+  },
+)
+```
+
+#### Integration with Custom Components
+
+For custom components that handle async operations (like `EngagementRow`), add loading state parameters:
+
+```dart
+// Component with loading states
+EngagementRow(
+  likesCount: note.reactions.length,
+  isLiked: userHasLiked,
+  isLiking: _isLiking, // Track loading state
+  onLike: () async {
+    setState(() => _isLiking = true);
+    try {
+      await performLike();
+    } finally {
+      setState(() => _isLiking = false);
+    }
+  },
+)
+```
+
+#### Error Handling Best Practices
+
+- **Show user-friendly error messages**: Avoid technical error details
+- **Use SnackBar for temporary feedback**: Brief, non-intrusive notifications
+- **Handle network failures gracefully**: Provide retry options when appropriate
+- **Prevent multiple simultaneous operations**: Disable buttons during loading
+
+#### Benefits
+
+- **Better UX**: Users see immediate feedback that their action was received
+- **Prevents double-taps**: Loading states disable buttons automatically  
+- **Consistent behavior**: Standardized loading and error patterns across the app
+- **Accessibility**: Screen readers can announce loading states
 
 ## Icons launcher
 

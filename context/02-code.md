@@ -32,13 +32,18 @@
 - The app architecture is local-first: All data is pulled from local storage, which is continually sync'ed from remote sources
 - Uses the `models` package, via Purplebase package that implements the local-first architecture
 - State management:
-  - Global and inter-component state uses Riverpod providers (use in `ConsumerWidget`)
-  - Local, intra-component state uses Flutter Hooks (use in `HookWidget` or `HookConsumerWidget` if it also reads providers)
+  - **Always use `flutter_hooks` for widget-local state** - Use `HookWidget` or `HookConsumerWidget`
+  - **Use Riverpod providers for all other state** - Global and inter-component state uses `ConsumerWidget`
+  - **Never use StatefulWidgets** - Hooks provide better composition and testing
   - Do not create simple wrappers around providers, i.e. wrapping one other provider without adding any value
 - Component-based architecture, with shared components in `lib/widgets`
 - Follows Material 3 design system and component patterns
 - Keep widgets of small or medium size and focused
 - Use Dart constants for magic numbers and strings (`kConstant`)
+
+### Git Guidelines
+
+**NEVER commit code changes on behalf of the user.** Always let the user review and commit their own changes. This ensures they maintain control over their git history and can review all changes before they become permanent.
 
 ### Common Widget Architecture
 
@@ -229,6 +234,8 @@ Assertions/expects in tests should be as detailed as possible, that is, do not s
 - **Utils (from models package)**: Use for all Nostr-related utilities (key generation, encoding/decoding, etc.)
 - **NoteParser**: REQUIRED for displaying any note content - never display raw note text
   - ⚠️ **This is a generic component in `/common/` - never modify with app-specific behavior**
+
+**Always use available MCP servers before searching the web.** The project includes MCP servers for development tasks and Nostr protocol reference - these should be your first resource for information and debugging.
 
 **Time Formatting Guidelines:**
 - Use `TimeAgoText` for timestamps that need to auto-update (feeds, chats, live content)

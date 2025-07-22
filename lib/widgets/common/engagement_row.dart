@@ -13,6 +13,9 @@ class EngagementRow extends StatelessWidget {
   final bool isLiked;
   final bool isReposted;
   final bool isZapped;
+  final bool isLiking;
+  final bool isReposting;
+  final bool isZapping;
 
   const EngagementRow({
     super.key,
@@ -28,6 +31,9 @@ class EngagementRow extends StatelessWidget {
     this.isLiked = false,
     this.isReposted = false,
     this.isZapped = false,
+    this.isLiking = false,
+    this.isReposting = false,
+    this.isZapping = false,
   });
 
   @override
@@ -45,6 +51,7 @@ class EngagementRow extends StatelessWidget {
             count: commentsCount!,
             onTap: onComment,
             isActive: false,
+            isLoading: false,
             activeColor: colorScheme.primary,
             theme: theme,
           ),
@@ -58,6 +65,7 @@ class EngagementRow extends StatelessWidget {
           count: likesCount,
           onTap: onLike,
           isActive: isLiked,
+          isLoading: isLiking,
           activeColor: const Color(0xFFE91E63), // Material Pink
           theme: theme,
         ),
@@ -71,6 +79,7 @@ class EngagementRow extends StatelessWidget {
           count: repostsCount,
           onTap: onRepost,
           isActive: isReposted,
+          isLoading: isReposting,
           activeColor: const Color(0xFF4CAF50), // Material Green
           theme: theme,
         ),
@@ -83,6 +92,7 @@ class EngagementRow extends StatelessWidget {
           satAmount: zapsSatAmount,
           onTap: onZap,
           isActive: isZapped,
+          isLoading: isZapping,
           theme: theme,
         ),
       ],
@@ -96,6 +106,7 @@ class _EngagementItem extends StatelessWidget {
   final int count;
   final VoidCallback? onTap;
   final bool isActive;
+  final bool isLoading;
   final Color activeColor;
   final ThemeData theme;
 
@@ -105,6 +116,7 @@ class _EngagementItem extends StatelessWidget {
     required this.count,
     required this.onTap,
     required this.isActive,
+    required this.isLoading,
     required this.activeColor,
     required this.theme,
   });
@@ -118,14 +130,23 @@ class _EngagementItem extends StatelessWidget {
     final displayIcon = isActive && activeIcon != null ? activeIcon! : icon;
 
     return InkWell(
-      onTap: onTap,
+      onTap: isLoading ? null : onTap,
       borderRadius: BorderRadius.circular(8),
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(displayIcon, size: 17, color: color),
+            isLoading
+                ? SizedBox(
+                    width: 17,
+                    height: 17,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: color,
+                    ),
+                  )
+                : Icon(displayIcon, size: 17, color: color),
             if (count > 0) ...[
               const SizedBox(width: 4),
               Text(
@@ -157,6 +178,7 @@ class _ZapItem extends StatelessWidget {
   final int satAmount;
   final VoidCallback? onTap;
   final bool isActive;
+  final bool isLoading;
   final ThemeData theme;
 
   const _ZapItem({
@@ -164,6 +186,7 @@ class _ZapItem extends StatelessWidget {
     required this.satAmount,
     required this.onTap,
     required this.isActive,
+    required this.isLoading,
     required this.theme,
   });
 
@@ -174,14 +197,23 @@ class _ZapItem extends StatelessWidget {
         : theme.colorScheme.onSurface.withValues(alpha: 0.6);
 
     return InkWell(
-      onTap: onTap,
+      onTap: isLoading ? null : onTap,
       borderRadius: BorderRadius.circular(8),
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.bolt, size: 17, color: color),
+            isLoading
+                ? SizedBox(
+                    width: 17,
+                    height: 17,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: color,
+                    ),
+                  )
+                : Icon(Icons.bolt, size: 17, color: color),
             if (count > 0 || satAmount > 0) ...[
               const SizedBox(width: 4),
               Text(

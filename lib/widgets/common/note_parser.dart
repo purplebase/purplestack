@@ -398,32 +398,16 @@ class ProfileEntityWidget extends ConsumerWidget {
 
     final profile = profileState.models.firstOrNull;
 
-    // Show skeleton loading when profile is being loaded
+    // Show animated npub while profile is being loaded
     if (profileState is StorageLoading ||
         (profile == null && profileState is StorageData)) {
       return GestureDetector(
         onTap: onProfileTap != null
             ? () => onProfileTap!(profileData.pubkey)
             : null,
-        child: DecoratedBox(
-          decoration: BoxDecoration(
-            color: colorPair[0].withValues(alpha: 0.1),
-            borderRadius: BorderRadius.circular(4.0),
-          ),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 4.0),
-            child: Skeletonizer(
-              enabled: true,
-              child: Container(
-                width: 80,
-                height: 16,
-                decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.surfaceContainerHighest,
-                  borderRadius: BorderRadius.circular(4),
-                ),
-              ),
-            ),
-          ),
+        child: _AnimatedLoadingChip(
+          text: 'npub1${profileData.pubkey.substring(0, 8)}...',
+          colorPair: colorPair,
         ),
       );
     }
@@ -633,18 +617,10 @@ class EventEntityWidget extends ConsumerWidget {
                                   fontWeight: FontWeight.w500,
                                 ),
                           )
-                        : Skeletonizer(
-                            enabled: true,
-                            child: Container(
-                              width: 80,
-                              height: 13,
-                              decoration: BoxDecoration(
-                                color: Theme.of(
-                                  context,
-                                ).colorScheme.surfaceContainerHighest,
-                                borderRadius: BorderRadius.circular(4),
-                              ),
-                            ),
+                        : _AnimatedLoadingChip(
+                            text:
+                                'npub1${note.event.pubkey.substring(0, 8)}...',
+                            colorPair: colorPair,
                           ),
                   ),
                   TimeAgoText(
@@ -911,18 +887,10 @@ class ReplyContextWidget extends ConsumerWidget {
                       const SizedBox(width: 6),
                       Expanded(
                         child: isAuthorLoading || isNoteLoading
-                            ? Skeletonizer(
-                                enabled: true,
-                                child: Container(
-                                  width: 60,
-                                  height: 12,
-                                  decoration: BoxDecoration(
-                                    color: Theme.of(
-                                      context,
-                                    ).colorScheme.surfaceContainerHighest,
-                                    borderRadius: BorderRadius.circular(4),
-                                  ),
-                                ),
+                            ? _AnimatedLoadingChip(
+                                text:
+                                    'npub1${replyToNote.event.pubkey.substring(0, 8)}...',
+                                colorPair: colorPair,
                               )
                             : Text(
                                 author?.nameOrNpub ??
@@ -1587,6 +1555,68 @@ class HashtagWidget extends StatelessWidget {
           ),
         ),
       ),
+    );
+  }
+}
+
+/// Animated loading chip for profile loading states
+class _AnimatedLoadingChip extends StatefulWidget {
+  final String text;
+  final List<Color> colorPair;
+
+  const _AnimatedLoadingChip({required this.text, required this.colorPair});
+
+  @override
+  State<_AnimatedLoadingChip> createState() => _AnimatedLoadingChipState();
+}
+
+class _AnimatedLoadingChipState extends State<_AnimatedLoadingChip>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  late Animation<double> _animation;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      duration: const Duration(milliseconds: 1500),
+      vsync: this,
+    );
+    _animation = Tween<double>(
+      begin: 0.1,
+      end: 0.3,
+    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeInOut));
+    _controller.repeat(reverse: true);
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _animation,
+      builder: (context, child) {
+        return DecoratedBox(
+          decoration: BoxDecoration(
+            color: widget.colorPair[0].withValues(alpha: _animation.value),
+            borderRadius: BorderRadius.circular(4.0),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 4.0),
+            child: Text(
+              widget.text,
+              style: Theme.of(context).textTheme.bodyMedium!.copyWith(
+                fontWeight: FontWeight.w500,
+                color: widget.colorPair[0],
+              ),
+            ),
+          ),
+        );
+      },
     );
   }
 }

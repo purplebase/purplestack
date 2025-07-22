@@ -2,6 +2,8 @@
 
 This project uses the `models` and `purplebase` packages which are the ONLY way to interact with the nostr network.
 
+**Always prioritize using models over the underlying `model.event` property.** Models provide rich methods, relationships, and domain-specific functionality. Only access the raw `event` property when model methods are insufficient or missing - for example, accessing custom tags not yet supported by the model interface.
+
 ### Nostr Implementation Guidelines
 
 - Always use the `mcp_nips_read_nips_index` tool before implementing any Nostr features to see what kinds are currently in use across all NIPs.
@@ -162,6 +164,17 @@ import 'package:models/models.dart';
 final state = ref.watch(query<Note>(authors: {pubkey1}, limit: 10));
 ```
 
+**Use `ref.storage` extension instead of `read(storageNotifierProvider.notifier)`.** This provides a cleaner API for storage operations:
+
+```dart
+// ✅ Preferred - clean extension syntax
+await ref.storage.save({model});
+await ref.storage.publish({model});
+
+// ❌ Avoid - verbose provider syntax  
+await ref.read(storageNotifierProvider.notifier).save({model});
+```
+
 `query` takes an `and` operator which will instruct it to load relationships. If data is needed, it's always better to use a relationship than a separate query call.
 
 **Do not call query**, especially with many relationships inside loops! If you need relationship loading, use `and` and loop there - it will have the chance to optimize data loading and relay requests.
@@ -225,7 +238,7 @@ class SignInScreen extends ConsumerWidget {
         children: [
           if (pubkey == null) ...[
             ElevatedButton(
-              onPressed: () => ref.read(amberSignerProvider).initialize(),
+              onPressed: () => ref.read(amberSignerProvider).signIn(),
               child: const Text('Sign In'),
             ),
           ] else ...[
@@ -235,7 +248,7 @@ class SignInScreen extends ConsumerWidget {
             Text(
                 '${pubkey.substring(0, 8)}...${pubkey.substring(pubkey.length - 8)}'),
             ElevatedButton(
-              onPressed: () => ref.read(amberSignerProvider).dispose(),
+              onPressed: () => ref.read(amberSignerProvider).signOut(),
               child: const Text('Sign Out'),
             ),
           ],
@@ -248,11 +261,39 @@ class SignInScreen extends ConsumerWidget {
 final amberSignerProvider = Provider<AmberSigner>(AmberSigner.new);
 ```
 
+**Auto Sign-In (Recommended):**
+
+For a better user experience, you can attempt to automatically sign in the user if they have previously authorized your app with Amber. This should be called in your app's initializer after the storage initialization:
+
+```dart
+// After initialization
+await ref.read(initializationProvider(StorageConfiguration()).future);
+await ref.read(amberSignerProvider).attemptAutoSignIn();
+```
+
+This method will silently attempt to restore the user's previous session without requiring user interaction.
+
 See "Signer Interface & Authentication" in the [#models 👯](#models-) reference below for more.
 
 ### Publishing
 
 To publish events, use `storage.publish(...)` in any callback.
+
+**Important**: `storage.save()` and `storage.publish()` are independent operations. If you need both local storage AND relay publishing, both methods must be called:
+
+```dart
+// ✅ Save locally AND publish to relays
+await ref.storage.save({signedEvent});
+await ref.storage.publish({signedEvent});
+
+// ❌ Wrong - only saves locally, doesn't publish to relays
+await ref.storage.save({signedEvent});
+
+// ❌ Wrong - only publishes to relays, doesn't save locally
+await ref.storage.publish({signedEvent});
+```
+
+Use `save()` for local-only operations and `publish()` for relay distribution. Most user actions require both to ensure data availability offline and online.
 
 ### `npub`, `naddr`, and other Nostr addresses
 
@@ -705,7 +746,7 @@ By default, private keys (nsec) are handled in-memory only when using `Bip340Pri
 ```dart
 // Private key is only stored in memory during app session
 final signer = Bip340PrivateKeySigner(privateKeyHex, ref);
-await signer.initialize();
+await signer.signIn();
 
 // When app closes, private key is lost and user must re-enter
 ```
