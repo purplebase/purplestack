@@ -5,7 +5,7 @@ packages:
     dependency: "direct main"
     description:
       path: "."
-      ref: b5e2a57
+      ref: main
       resolved-ref: b5e2a5718bfb206dc7f113bddf3e9ffc5864ee35
       url: "https://github.com/purplebase/amber_signer"
     source: git
@@ -549,7 +549,7 @@ packages:
     dependency: "direct main"
     description:
       path: "."
-      ref: "501c8cf"
+      ref: main
       resolved-ref: "501c8cf4d5d3ba23fec417820ba7fe25ca7cd339"
       url: "https://github.com/purplebase/models"
     source: git
@@ -719,7 +719,7 @@ packages:
     dependency: "direct main"
     description:
       path: "."
-      ref: "872df96"
+      ref: master
       resolved-ref: "872df965d97e8b35d7d62f54e0ac9075af07095e"
       url: "https://github.com/purplebase/purplebase"
     source: git
