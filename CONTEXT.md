@@ -2,9 +2,42 @@
 
 Development stack designed for AI agents to build Nostr-enabled Flutter applications. It includes a complete tech stack with Purplebase and Riverpod, documentation and recipes for common implementation scenarios.
 
-**Important for AI Assistants**:
-  - **Behavior**: The AI assistant's behavior and knowledge is defined by the CONTEXT.md file, which serves as the system prompt. ALWAYS refer to this document and follow these rules and recommendations.
-  - **First prompt**: When a user makes the first prompt, and only during that very first prompt, you MUST ALWAYS summarize what you understood, and ask important questions to ensure all requirements are crystal clear before starting to code. Do NOT skip this first step.
+## CRITICAL FOR AI ASSISTANTS - MUST READ FIRST
+
+**Reference**. The AI assistant's behavior and knowledge is defined by the `CONTEXT.md` file (aliased to other IDE-specific filenames), which serves as the system prompt. **ALWAYS** refer to this document and follow these rules and recommendations.
+
+### First prompt
+
+When a user makes the first prompt, and only during that very first prompt, you MUST ALWAYS summarize what you understood, and ask important questions to ensure all requirements are crystal clear before starting to code. Do NOT skip this first step. Suggest the user an app name, app ID (e.g., `com.sample.app`) and description. Based on obtained information, you MUST call the `rename_app` tool (`dart tools/bin/rename_app.dart --name "Your App Name" --app-id "com.sample.app"` – full reference in the `recipes/renaming-app.md` file).
+
+### Recipes
+
+The directory `tools/recipes` has a bunch of Markdown files with popular use-cases. **YOU _MUST_ REFER TO THESE FILES BEFORE IMPLEMENTING A NEW FEATURE**. If the information there is not present or sufficient, proceed as usual.
+
+### MCP Servers
+
+There are included MCP servers you may find helpful.
+
+#### `developer` MCP Server
+
+The `developer` server provides development and debugging tools.
+
+Use this server for:
+- Code generation and modification
+- Running tests and builds
+- Debugging issues
+- Project exploration and analysis
+
+#### `nostr` MCP Server
+
+The `nostr` server provides Nostr protocol reference and documentation. You MUST ALWAYS attempt to use the `models` package, following `tools/reference` Markdown documents for models. If a model does not exist, you MAY use this MCP server to understand how to create and register a new model.
+
+Use this server for:
+- Understanding Nostr protocol specifications
+- Finding appropriate event kinds for features
+- Learning tag usage patterns
+- Ensuring compliance with Nostr standards
+- Researching existing solutions before creating custom kinds
 
 ## Technology Stack
 
@@ -48,7 +81,7 @@ When `fvm` is available, always use it for Flutter commands to ensure consistent
 ```bash
 # Use fvm flutter instead of direct flutter commands
 fvm flutter run
-fvm flutter build
+fvm flutter build apk --target-platform android-arm64  # For Android APK distribution
 fvm flutter analyze
 ```
 
@@ -66,40 +99,6 @@ fvm dart pub remove package_name
 # Getting dependencies
 fvm dart pub get
 ```
-
-## MCP Servers
-
-There are included MCP servers that you MUST use them appropriately:
-
-### `developer` MCP Server
-
-The `developer` server provides development and debugging tools:
-- **File operations**: Reading, writing, editing files in the project
-- **Terminal commands**: Running development commands, build processes, testing
-- **Code analysis**: Searching code, analyzing structure, finding patterns
-- **Project management**: Understanding project layout and dependencies
-
-Use this server for:
-- Code generation and modification
-- Running tests and builds
-- Debugging issues
-- Project exploration and analysis
-
-### `nostr` MCP Server
-
-The `nostr` server provides Nostr protocol reference and documentation:
-- **NIP documentation**: Read specific NIPs using `mcp_nips_read_nip`
-- **Kind reference**: Look up event kinds with `mcp_nips_read_kind`
-- **Tag reference**: Understand tag usage with `mcp_nips_read_tag`
-- **Protocol basics**: Core concepts with `mcp_nips_read_protocol`
-- **Complete index**: Overview of all NIPs, kinds, and tags with `mcp_nips_read_nips_index`
-
-Use this server for:
-- Understanding Nostr protocol specifications
-- Finding appropriate event kinds for features
-- Learning tag usage patterns
-- Ensuring compliance with Nostr standards
-- Researching existing solutions before creating custom kinds
 
 ## Project Structure
 
@@ -662,25 +661,12 @@ EngagementRow(
 - **Consistent behavior**: Standardized loading and error patterns across the app
 - **Accessibility**: Screen readers can announce loading states
 
-## Icons launcher
+## Releasing to Production
 
-Used to create icons for all platforms.
+For correct app name, app ID, and icon generation for all platforms, follow `tools/recipes/renaming-app.md`.
 
-```yaml
-icons_launcher:
-  image_path: "assets/images/logo.png"
-  platforms:
-    android:
-      enable: true
-      image_path: "assets/images/logo.png"
-      notification_image: "assets/images/logo.png"
-      adaptive_background_image: "assets/images/logo-bg.png"
-      adaptive_foreground_image: "assets/images/logo-fg.png"
-      adaptive_monochrome_image: "assets/images/logo-bw.png"
-    macos:
-      enable: true
-      image_path: "assets/images/logo.png"
-```
+When building Flutter apps for Android distribution, always use the optimized ARM64 build: `fvm flutter build apk --target-platform android-arm64` (this is the only platform that matters for modern Android devices).
+
 ## Code Guidelines
 
 ### Code Style
@@ -708,6 +694,8 @@ icons_launcher:
 - Avoid superfluous comments like: `relay.stop(); // Stops the relay`. Only add comments in complex scenarios when code can't clearly express what is going on
 - Hardcoding and workarounds: **explicitly forbidden**. For example, do not make special cases just for tests to pass, like cheating in an exam. You should always prioritize the architecturally sound approach, even if it takes a bit longer
 - Never use artificial waits (`Future.delayed`) unless it is absolutely necessary for a particular feature. Properly awaiting futures is the architecturally sound way and should always be prioritized.
+- **NEVER EVER use polling** - Always subscribe to listeners and streams instead of polling for data changes. Polling wastes resources and creates poor user experience. Use Riverpod's reactive patterns, `ref.watch()`, `ref.listen()`, and stream subscriptions.
+- **Avoid pure wrapper methods** that add bloat and no value. Don't create simple wrappers around providers or methods without adding meaningful functionality.
 - Use Flutter best practices
 
 ### Architecture
@@ -719,6 +707,17 @@ icons_launcher:
   - **Use Riverpod providers for all other state** - Global and inter-component state uses `ConsumerWidget`
   - **Never use StatefulWidgets** - Hooks provide better composition and testing
   - Do not create simple wrappers around providers, i.e. wrapping one other provider without adding any value
+  - **Listening to model streams**: When a model from a stream needs to be listened to, use `ref.listen(query(...))` with a Completer for proper async handling:
+    ```dart
+    // ✅ Correct pattern for listening to model changes
+    final completer = Completer<Note>();
+    ref.listen(query<Note>(ids: {noteId}), (previous, next) {
+      if (next.hasValue && next.value!.isNotEmpty) {
+        completer.complete(next.value!.first);
+      }
+    });
+    final note = await completer.future;
+    ```
 - Component-based architecture, with shared components in `lib/widgets`
 - Follows Material 3 design system and component patterns
 - Keep widgets of small or medium size and focused
@@ -1159,9 +1158,30 @@ ref.watch(query<GenericRepost>(authors: {pubkey1}));
 4. **Filter by querying local storage**: Querying local storage is cheap, make any kind of specific query there
 5. **Consider relay capacity**: Each query consumes relay resources and may count against rate limits
 
+**RequestFilter Usage:**
+- **NEVER use `kinds: {}` with `RequestFilter<E>`** where E is a specific model type - it makes no sense since the model type already determines the kind
+- Only use `kinds:` parameter when using `RequestFilter<Model>` (generic) and you need to specify multiple kinds
+- **❌ Wrong**: `RequestFilter<Note>(kinds: {1})` - Note already implies kind 1
+- **✅ Correct**: `RequestFilter<Note>(authors: {pubkey})` - Let the model determine the kind
+- **✅ Correct**: `RequestFilter<Model>(kinds: {1, 6, 16})` - Generic model with multiple kinds
+
 ### Displaying a profile
 
 To display profile data for a user by their Nostr pubkey (such as an event author), use the `query<Profile>(authors: {pubkey1})`.
+
+**Profile Bio Rendering**: When displaying profile bios or descriptions, always use `NoteParser` to properly render Nostr references, hashtags, and URLs:
+
+```dart
+// ✅ Correct: Parse bio content for Nostr entities
+ParsedContentWidget(
+  content: profile.about ?? '',
+  onProfileTap: (pubkey) => context.push('/profile/$pubkey'),
+  onHashtagTap: (hashtag) => context.push('/hashtag/$hashtag'),
+)
+
+// ❌ Wrong: Displaying raw bio text
+Text(profile.about ?? '')
+```
 
 ### Signing in a profile
 
@@ -1663,7 +1683,7 @@ The underlying `models` implementation (via the `purplebase` package) automatica
 
 ### Debug Information Provider
 
-For debugging and monitoring, Purplebase exposes the `infoNotifierProvider` which streams diagnostic messages about the Nostr operations:
+For debugging and monitoring, Purplebase exposes the `infoNotifierProvider` which streams diagnostic messages about the Nostr operations. This is the primary tool for debugging storage and relay pool issues:
 
 ```dart
 // Listen to debug info in your app
@@ -1671,14 +1691,37 @@ ref.listen(infoNotifierProvider, (previous, next) {
   print('Nostr Debug: $next');
   // Or display in a debug screen, log to file, etc.
 });
+
+// Example: Display debug info in a debug screen
+class DebugScreen extends ConsumerWidget {
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final debugInfo = ref.watch(infoNotifierProvider);
+    
+    return Scaffold(
+      appBar: AppBar(title: Text('Debug Info')),
+      body: ListView(
+        children: [
+          ListTile(
+            title: Text('Current Status'),
+            subtitle: Text(debugInfo ?? 'No debug info'),
+          ),
+          // Add more debug information display
+        ],
+      ),
+    );
+  }
+}
 ```
 
-Use this provider to:
-- Monitor relay connection status
-- Debug event publishing issues
-- Track storage operations
-- Monitor network performance
-- Troubleshoot synchronization problems
+**Use `infoNotifierProvider` for easy debugging of:**
+- **Storage operations**: Database queries, saves, and cache hits
+- **Relay pool status**: Connection states, subscription management, publishing results
+- **Event processing**: Validation, parsing, and relationship loading
+- **Network performance**: Response times, retry attempts, failure reasons
+- **Synchronization issues**: Data consistency problems between local and remote
+
+**Pro tip**: Create a debug overlay or dedicated debug screen in development builds to continuously monitor this information.
 
 ## Security and Environment
 
@@ -1752,6 +1795,10 @@ It provides:
  - A local-first model storage and relay interface, leveraging reactive Riverpod providers
  - Easy extensibility
 
+> 📚 **For practical recipes and examples, check out [Purplestack](https://github.com/purplebase/purplestack)**, an agentic development stack for building Nostr-enabled Flutter applications - the best way to use this package with ready-to-use app templates and patterns.
+>
+> 📖 **Per-model documentation** is available in the [`docs/`](docs/) directory with detailed API references and usage examples.
+
 An offline-ready app with reactions/zaps in a few lines of code:
 
 ```dart
@@ -1778,7 +1825,7 @@ Widget build(BuildContext context, WidgetRef ref) {
 ```
 
 Current implementations:
-  - Dummy: In-memory storage and relay fetch simulation, for testing and prototyping (default, included)
+  - Dummy: In-memory storage and relay, for testing and prototyping (default, included)
   - [Purplebase](https://github.com/purplebase/purplebase): SQLite-powered storage and an efficient relay pool
 
 ## Features ✨
@@ -1801,168 +1848,28 @@ dependencies:
   models:
     git: # git until we put it on pub.dev
       url: https://github.com/purplebase/models
-      ref: 0.1.0
+      ref: main
 ```
 
 Then run `dart pub get` or `flutter pub get`.
 
 ## Table of Contents 📜
 
-- [Quickstart 🚀](#quickstart-)
 - [Core Concepts 🧠](#core-concepts-)
   - [Models & Partial Models](#models--partial-models)
   - [Relationships](#relationships)
   - [Querying](#querying)
   - [Storage & Relays](#storage--relays)
   - [Source Behavior](#source-behavior)
-- [Recipes 🍳](#recipes-)
-  - [Signer Interface & Authentication](#signer-interface--authentication)
-  - [Building a Feed](#building-a-feed)
-  - [Creating Custom Event Kinds](#creating-custom-event-kinds)
-  - [Using the `and` Operator for Relationships](#using-the-and-operator-for-relationships)
-  - [Direct Messages & Encryption](#direct-messages--encryption)
-  - [Working with DVMs (NIP-90)](#working-with-dvms-nip-90)
 - [API Reference 📚](#api-reference-)
   - [Storage Configuration](#storage-configuration)
   - [Query Filters](#query-filters)
-  - [Model Types](#model-types)
   - [Utilities](#utilities)
   - [Event Verification](#event-verification)
   - [Error Handling](#error-handling)
 - [Design Notes 📝](#design-notes-)
 - [Contributing 🙏](#contributing-)
 - [License 📄](#license-)
-
-## Quickstart 🚀
-
-Here is a minimal Flutter/Riverpod app that shows a user's notes and replies.
-
-```dart
-import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:models/models.dart';
-
-void main() => runApp(ProviderScope(child: MaterialApp(home: NotesScreen())));
-
-class NotesScreen extends ConsumerWidget {
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    return switch (ref.watch(initializationProvider(StorageConfiguration()))) {
-      AsyncLoading() => Center(child: CircularProgressIndicator()),
-      AsyncError() => Center(child: Text('Error initializing')),
-      _ => Scaffold(
-        body: Consumer(
-          builder: (context, ref, _) {
-            final activePubkey = ref.watch(Signer.activePubkeyProvider);
-            if (activePubkey == null) {
-              return Center(child: Text('Please sign in'));
-            }
-            
-            final notesState = ref.watch(
-              query<Note>(
-                authors: {activePubkey},
-                limit: 100,
-                and: (note) => {
-                  note.author,      // Include author profile
-                  note.reactions,   // Include reactions
-                  note.zaps,        // Include zaps
-                  note.root,        // Include root note for replies
-                  note.replies,     // Include direct replies
-                },
-              ),
-            );
-            
-            return switch (notesState) {
-              StorageLoading() => Center(child: CircularProgressIndicator()),
-              StorageError() => Center(child: Text('Error loading notes')),
-              StorageData() => ListView.builder(
-                itemCount: notesState.models.length,
-                itemBuilder: (context, index) {
-                  final note = notesState.models[index];
-                  return NoteCard(note: note);
-                },
-              ),
-            };
-          },
-        ),
-        floatingActionButton: FloatingActionButton(
-          child: Icon(Icons.add),
-          onPressed: () async {
-            final signer = ref.read(Signer.activeSignerProvider);
-            if (signer != null) {
-              final newNote = await PartialNote('Hello, nostr!').signWith(signer);
-              await ref.storage.save({newNote});
-            }
-          },
-        ),
-      ),
-    };
-  }
-}
-
-class NoteCard extends StatelessWidget {
-  final Note note;
-  
-  const NoteCard({required this.note, super.key});
-  
-  @override
-  Widget build(BuildContext context) {
-    return Card(
-      child: Padding(
-        padding: EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Author info
-            Row(
-              children: [
-                CircleAvatar(
-                  backgroundImage: NetworkImage(
-                    note.author.value?.pictureUrl ?? '',
-                  ),
-                ),
-                SizedBox(width: 8),
-                Text(note.author.value?.nameOrNpub ?? 'Unknown'),
-              ],
-            ),
-            SizedBox(height: 8),
-            
-            // Note content
-            Text(note.content),
-            SizedBox(height: 8),
-            
-            // Reply indicator
-            if (note.root.value != null)
-              Text('↳ Reply to ${note.root.value!.author.value?.nameOrNpub ?? 'Unknown'}'),
-            
-            // Engagement metrics
-            Row(
-              children: [
-                Icon(Icons.favorite, size: 16),
-                Text('${note.reactions.length}'),
-                SizedBox(width: 16),
-                Icon(Icons.flash_on, size: 16),
-                Text('${note.zaps.length}'),
-                SizedBox(width: 16),
-                Icon(Icons.reply, size: 16),
-                Text('${note.replies.length}'),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-```
-
-**Flutter Syntax Sugar** (Optional): For Flutter apps, you can add this extension for cleaner syntax:
-
-```dart
-extension WidgetRefStorage on WidgetRef {
-  StorageNotifier get storage => read(storageNotifierProvider.notifier);
-}
-```
 
 ## NIP Implementation Status 📋
 
@@ -1993,6 +1900,7 @@ extension WidgetRefStorage on WidgetRef {
 - [x] **NIP-82: Application metadata, releases, assets** _(draft)_
 - [x] **NIP-90: Data Vending Machine**
 - [x] **NIP-94: File Metadata**
+- [x] **NIP-47: Nostr Wallet Connect** - Complete implementation with connection management, commands, and secure storage
 
 ## Core Concepts 🧠
 
@@ -2115,6 +2023,10 @@ source: LocalSource()
 ```dart
 source: RemoteSource(
   group: 'social',        // Use specific relay group (defaults to 'default')
+  relayUrls: {            // Custom relay URLs (overrides group)
+    'wss://custom1.relay.io',
+    'wss://custom2.relay.io',
+  },
   stream: true,           // Enable streaming (default)
   background: false,      // Wait for EOSE before returning
 )
@@ -2124,9 +2036,52 @@ source: RemoteSource(
 ```dart
 source: LocalAndRemoteSource(
   group: 'social',        // Use specific relay group (defaults to 'default')
+  relayUrls: {            // Custom relay URLs (overrides group)
+    'wss://priority.relay.io',
+  },
   stream: true,           // Enable streaming (default)
   background: true,       // Don't wait for EOSE
 )
+```
+
+**Relay Selection Priority**:
+1. **`relayUrls`** - When provided, these specific relay URLs are used
+2. **`group`** - Falls back to the relay group defined in `StorageConfiguration`
+3. **`defaultRelayGroup`** - Uses the default group when neither is specified
+
+This provides flexibility between:
+- **Initialization-time groups**: Define stable relay collections in `StorageConfiguration.relayGroups`
+- **Runtime flexibility**: Override with specific `relayUrls` for individual queries
+
+```dart
+// Use predefined relay groups (configured at initialization)
+final socialNotes = ref.watch(
+  query<Note>(
+    authors: {pubkey},
+    source: RemoteSource(group: 'social'),
+  ),
+);
+
+// Override with custom relays at runtime
+final privateNotes = ref.watch(
+  query<Note>(
+    authors: {pubkey},
+    source: RemoteSource(
+      relayUrls: {'wss://my-private-relay.com'},
+    ),
+  ),
+);
+
+// Combine local storage with custom relays
+final hybridQuery = ref.watch(
+  query<Note>(
+    authors: {pubkey},
+    source: LocalAndRemoteSource(
+      relayUrls: {'wss://fast-relay.io', 'wss://backup-relay.io'},
+      background: true,
+    ),
+  ),
+);
 ```
 
 **Query Behavior**:
@@ -2137,616 +2092,14 @@ source: LocalAndRemoteSource(
 
 ## Recipes 🍳
 
-### Signer Interface & Authentication
-
-The signer system manages authentication and signing across your app.
-
-**Basic Signer Setup:**
-
-```dart
-// Create a private key signer
-final privateKey = 'your_private_key_here';
-final signer = Bip340PrivateKeySigner(privateKey, ref);
-
-// Sign in (sets the pubkey as active)
-await signer.signIn();
-
-// Check if signer is signed in and available for use
-final isSignedIn = signer.isSignedIn;
-final isAvailable = await signer.isAvailable;
-
-// Watch the active profile (use RemoteSource() if you want to fetch from relays)
-final activeProfile = ref.watch(Signer.activeProfileProvider(LocalSource()));
-final activePubkey = ref.watch(Signer.activePubkeyProvider);
-```
-
-**Multiple Account Management:**
-
-```dart
-// Sign in multiple accounts
-final signer1 = Bip340PrivateKeySigner(privateKey1, ref);
-final signer2 = Bip340PrivateKeySigner(privateKey2, ref);
-
-await signer1.signIn(setAsActive: false); // Don't set as active
-await signer2.signIn(setAsActive: true);  // Set as active
-
-// Switch between accounts
-await signer1.setAsActivePubkey();
-await signer2.removeAsActivePubkey();
-
-// Get all signed-in accounts
-final signedInPubkeys = ref.watch(Signer.signedInPubkeysProvider);
-```
-
-**Active Profile with Different Sources:**
-
-```dart
-// Get active profile from local storage only
-final localProfile = ref.watch(Signer.activeProfileProvider(LocalSource()));
-
-// Get active profile from local storage and relays
-final fullProfile = ref.watch(Signer.activeProfileProvider(LocalAndRemoteSource()));
-
-// Get active profile from specific relay group
-final socialProfile = ref.watch(Signer.activeProfileProvider(
-  RemoteSource(group: 'social'),
-));
-```
-
-The [amber_signer](https://github.com/purplebase/amber_signer) package implements this interface for Amber / NIP-55.
-
-**Sign Out Flow:**
-
-```dart
-// Clean up when user signs out
-await signer.signOut();
-
-// The active profile provider will automatically update
-// as the signer is removed from the system
-```
-
-### Building a Feed
-
-Create a reactive feed that updates in real-time.
-
-**Home Feed with Relationships:**
-
-```dart
-class HomeFeed extends ConsumerWidget {
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final activeProfile = ref.watch(Signer.activeProfileProvider(LocalSource()));
-    
-    if (activeProfile == null) {
-      return Center(child: Text('Please sign in'));
-    }
-    
-    // Get following pubkeys from contact list
-    final following = activeProfile.contactList.value?.followingPubkeys ?? {};
-    
-    final feedState = ref.watch(
-      query<Note>(
-        authors: following,
-        limit: 50,
-        and: (note) => {
-          note.author,           // Include author profile
-          note.reactions,        // Include reactions
-          note.zaps,            // Include zaps
-          note.root,            // Include root note for replies
-        },
-      ),
-    );
-    
-    return switch (feedState) {
-      StorageLoading() => Center(child: CircularProgressIndicator()),
-      StorageError() => Center(child: Text('Error loading feed')),
-      StorageData() => ListView.builder(
-        itemCount: feedState.models.length,
-        itemBuilder: (context, index) {
-          final note = feedState.models[index];
-          return FeedItemCard(note: note);
-        },
-      ),
-    };
-  }
-}
-
-class FeedItemCard extends StatelessWidget {
-  final Note note;
-  
-  const FeedItemCard({required this.note, super.key});
-  
-  @override
-  Widget build(BuildContext context) {
-    return Card(
-      child: Padding(
-        padding: EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Author info
-            Row(
-              children: [
-                CircleAvatar(
-                  backgroundImage: NetworkImage(
-                    note.author.value?.pictureUrl ?? '',
-                  ),
-                ),
-                SizedBox(width: 8),
-                Text(note.author.value?.nameOrNpub ?? 'Unknown'),
-              ],
-            ),
-            SizedBox(height: 8),
-            
-            // Note content
-            Text(note.content),
-            SizedBox(height: 8),
-            
-            // Engagement metrics
-            Row(
-              children: [
-                Icon(Icons.favorite, size: 16),
-                Text('${note.reactions.length}'),
-                SizedBox(width: 16),
-                Icon(Icons.flash_on, size: 16),
-                Text('${note.zaps.length}'),
-                SizedBox(width: 16),
-                Text(note.createdAt.toString()),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-```
-
-**Real-time Updates:**
-
-```dart
-// The feed automatically updates when new notes arrive
-// thanks to the reactive query system
-
-// You can also manually trigger updates
-final storage = ref.read(storageNotifierProvider.notifier);
-
-// Save a new note and it will appear in the feed
-final newNote = await PartialNote('Hello, world!').signWith(signer);
-await storage.save({newNote});
-```
-
-### Creating Custom Event Kinds
-
-Extend the system with your own event kinds.
-
-**Basic Custom Model:**
-
-```dart
-@GeneratePartialModel()
-class Joke extends RegularModel<Joke> {
-  Joke.fromMap(super.map, super.ref) : super.fromMap();
-  
-  String? get title => event.getFirstTagValue('title');
-  String get punchline => event.content;
-  DateTime? get publishedAt => 
-      event.getFirstTagValue('published_at')?.toInt()?.toDate();
-}
-
-class PartialJoke extends RegularPartialModel<Joke> with PartialJokeMixin {
-  PartialJoke({
-    required String title,
-    required String punchline,
-    DateTime? publishedAt,
-  }) {
-    event.content = punchline;
-    event.addTagValue('title', title);
-    if (publishedAt != null) {
-      event.addTagValue('published_at', publishedAt.toSeconds().toString());
-    }
-  }
-}
-```
-
-**Registering Custom Kinds:**
-
-```dart
-// Create a custom initialization provider
-final customInitializationProvider = FutureProvider((ref) async {
-  await ref.read(initializationProvider(StorageConfiguration()).future);
-  
-  // Register your custom models
-  Model.register(kind: 1055, constructor: Joke.fromMap);
-  Model.register(kind: 1056, constructor: Meme.fromMap);
-  
-  return true;
-});
-
-// Use this provider instead of the default one
-final initState = ref.watch(customInitializationProvider);
-```
-
-**Using Custom Models:**
-
-```dart
-// Create and sign a joke
-final partialJoke = PartialJoke(
-  title: 'The Time Traveler',
-  punchline: 'I was going to tell you a joke about time travel... but you didn\'t like it.',
-  publishedAt: DateTime.now(),
-);
-
-final signedJoke = await partialJoke.signWith(signer);
-
-// Save to storage
-await ref.storage.save({signedJoke});
-
-// Query jokes
-final jokesState = ref.watch(
-  query<Joke>(
-    authors: {signer.pubkey},
-    limit: 10,
-  ),
-);
-```
-
-**Different Model Types:**
-
-```dart
-// Regular events (kind 1-9999)
-class RegularEvent extends RegularModel<RegularEvent> {
-  RegularEvent.fromMap(super.map, super.ref) : super.fromMap();
-}
-
-// Replaceable events (kind 0, 3, 10000-19999)
-class ReplaceableEvent extends ReplaceableModel<ReplaceableEvent> {
-  ReplaceableEvent.fromMap(super.map, super.ref) : super.fromMap();
-}
-
-// Parameterizable replaceable events (kind 30000-39999)
-class ParameterizableEvent extends ParameterizableReplaceableModel<ParameterizableEvent> {
-  ParameterizableEvent.fromMap(super.map, super.ref) : super.fromMap();
-  
-  String get identifier => event.identifier; // d-tag value
-}
-
-// Ephemeral events (kind 20000-29999)
-class EphemeralEvent extends EphemeralModel<EphemeralEvent> {
-  EphemeralEvent.fromMap(super.map, super.ref) : super.fromMap();
-}
-```
-
-### Using the `and` Operator for Relationships
-
-The `and` operator enables reactive relationship loading and updates.
-
-**Basic Relationship Loading:**
-
-```dart
-// Load notes with their authors and reactions
-final notesState = ref.watch(
-  query<Note>(
-    limit: 20,
-    and: (note) => {
-      note.author,      // Load author profile
-      note.reactions,   // Load reactions
-      note.zaps,        // Load zaps
-    },
-  ),
-);
-```
-
-**Nested Relationships:**
-
-```dart
-// Load notes with nested relationship data
-final notesState = ref.watch(
-  query<Note>(
-    limit: 20,
-    and: (note) => {
-      note.author,      // Author profile
-      note.reactions,   // Reactions
-      ...note.reactions.map((reaction) => reaction.author), // Reaction authors
-      note.zaps,        // Zaps
-      ...note.zaps.map((zap) => zap.author), // Zap authors
-    },
-  ),
-);
-```
-
-**Conditional Relationship Loading:**
-
-```dart
-// Only load relationships for notes with content
-final notesState = ref.watch(
-  query<Note>(
-    limit: 20,
-    and: (note) => {
-      if (note.content.isNotEmpty) ...[
-        note.author,
-        note.reactions,
-      ],
-    },
-  ),
-);
-```
-
-**Relationship Updates:**
-
-```dart
-// When a new reaction is added, all queries watching that note
-// will automatically update thanks to the relationship system
-
-final newReaction = await PartialReaction(
-  reactedOn: note,
-  emojiTag: ('+', 'https://example.com/plus.png'),
-).signWith(signer);
-
-await ref.storage.save({newReaction});
-
-// The note's reactions relationship will automatically update
-// and any UI watching it will rebuild
-```
-
-**Community Chat Messages:**
-
-```dart
-// Load a community with its chat messages
-final communityState = ref.watch(
-  query<Community>(
-    ids: {communityId},
-    and: (community) => {
-      community.chatMessages, // Load associated chat messages
-    },
-  ),
-);
-
-// Access the chat messages
-final community = communityState.models.first;
-final messages = community.chatMessages.toList();
-```
-
-### Direct Messages & Encryption
-
-Create encrypted direct messages using NIP-04 and NIP-44.
-
-**Creating Encrypted Messages:**
-
-```dart
-// Create a message with automatic encryption
-final dm = PartialDirectMessage(
-  content: 'Hello, this is a secret message!',
-  receiver: 'npub1abc123...', // Recipient's npub
-  useNip44: true, // Use NIP-44 (more secure) or false for NIP-04
-);
-
-// Sign and encrypt the message
-final signedDm = await dm.signWith(signer);
-
-// Save to storage
-await ref.storage.save({signedDm});
-```
-
-**Decrypting Messages:**
-
-```dart
-// Query for direct messages
-final dmsState = ref.watch(
-  query<DirectMessage>(
-    authors: {signer.pubkey}, // Messages we sent
-    tags: {'#p': {recipientPubkey}}, // Messages to specific recipient
-  ),
-);
-
-// In your UI, decrypt messages asynchronously
-class MessageTile extends StatelessWidget {
-  final DirectMessage dm;
-  
-  const MessageTile({required this.dm, super.key});
-  
-  @override
-  Widget build(BuildContext context) {
-    return FutureBuilder<String>(
-      future: dm.decryptContent(),
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return ListTile(
-            title: Text('Decrypting...'),
-            subtitle: Text(dm.encryptedContent),
-          );
-        }
-        
-        return ListTile(
-          title: Text(snapshot.data ?? 'Failed to decrypt'),
-          subtitle: Text(dm.createdAt.toString()),
-        );
-      },
-    );
-  }
-}
-```
-
-**Message Threads:**
-
-```dart
-// Create a conversation view
-class ConversationView extends ConsumerWidget {
-  final String otherPubkey;
-  
-  const ConversationView({required this.otherPubkey, super.key});
-  
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final messagesState = ref.watch(
-      query<DirectMessage>(
-        authors: {signer.pubkey, otherPubkey},
-        tags: {'#p': {signer.pubkey, otherPubkey}},
-        limit: 100,
-      ),
-    );
-    
-    return switch (messagesState) {
-      StorageLoading() => Center(child: CircularProgressIndicator()),
-      StorageError() => Center(child: Text('Error loading messages')),
-      StorageData() => ListView.builder(
-        reverse: true,
-        itemCount: messagesState.models.length,
-        itemBuilder: (context, index) {
-          final dm = messagesState.models[index];
-          final isFromMe = dm.event.pubkey == signer.pubkey;
-          
-          return MessageBubble(
-            message: dm,
-            isFromMe: isFromMe,
-          );
-        },
-      ),
-    };
-  }
-}
-```
-
-**Pre-encrypted Messages:**
-
-```dart
-// For messages already encrypted by external systems
-final preEncryptedDm = PartialDirectMessage.encrypted(
-  encryptedContent: 'A1B2C3...', // Already encrypted content
-  receiver: 'npub1abc123...',
-);
-
-final signedDm = await preEncryptedDm.signWith(signer);
-```
-
-### Working with DVMs (NIP-90)
-
-Interact with Decentralized Virtual Machines for reputation verification and other services.
-
-**Creating DVM Requests:**
-
-```dart
-// Create a reputation verification request
-final request = PartialVerifyReputationRequest(
-  source: 'npub1source123...',
-  target: 'npub1target456...',
-);
-
-final signedRequest = await request.signWith(signer);
-
-// Run the DVM request
-final response = await signedRequest.run('default'); // relay group
-
-if (response != null) {
-  if (response is VerifyReputationResponse) {
-    print('Reputation verified: ${response.pubkeys}');
-  } else if (response is DVMError) {
-    print('DVM error: ${response.status}');
-  }
-}
-```
-
-**Custom DVM Models:**
-
-```dart
-// Create your own DVM request model
-class CustomDVMRequest extends RegularModel<CustomDVMRequest> {
-  CustomDVMRequest.fromMap(super.map, super.ref) : super.fromMap();
-  
-  Future<Model<dynamic>?> run(String relayGroup) async {
-    final source = RemoteSource(group: relayGroup);
-    
-    // Publish the request
-    await storage.publish({this}, source: source);
-    
-    // Wait for responses
-    final responses = await storage.query(
-      RequestFilter(
-        kinds: {7001}, // Your response kind
-        tags: {'#e': {event.id}}, // Reference to this request
-      ).toRequest(),
-      source: source,
-    );
-    
-    return responses.firstOrNull;
-  }
-}
-
-class PartialCustomDVMRequest extends RegularPartialModel<CustomDVMRequest> {
-  PartialCustomDVMRequest({
-    required String parameter1,
-    required String parameter2,
-  }) {
-    event.addTag('param', ['param1', parameter1]);
-    event.addTag('param', ['param2', parameter2]);
-  }
-}
-```
-
-**DVM Response Handling:**
-
-```dart
-// Handle different types of DVM responses
-class DVMResponseHandler {
-  static void handleResponse(Model<dynamic> response) {
-    switch (response) {
-      case VerifyReputationResponse():
-        print('Reputation verified: ${response.pubkeys}');
-        break;
-      case DVMError():
-        print('DVM error: ${response.status}');
-        break;
-      case CustomDVMResponse():
-        print('Custom response: ${response.data}');
-        break;
-      default:
-        print('Unknown response type');
-    }
-  }
-}
-
-// Use in your app
-final response = await dvmRequest.run('default');
-if (response != null) {
-  DVMResponseHandler.handleResponse(response);
-}
-```
-
-**DVM Error Handling:**
-
-```dart
-// Robust DVM interaction with error handling
-Future<Model<dynamic>?> runDVMWithRetry(
-  Model<dynamic> request,
-  String relayGroup, {
-  int maxRetries = 3,
-  Duration delay = Duration(seconds: 5),
-}) async {
-  for (int attempt = 1; attempt <= maxRetries; attempt++) {
-    try {
-      final response = await request.run(relayGroup);
-      
-      if (response is DVMError) {
-        print('DVM error on attempt $attempt: ${response.status}');
-        if (attempt < maxRetries) {
-          await Future.delayed(delay);
-          continue;
-        }
-      }
-      
-      return response;
-    } catch (e) {
-      print('DVM request failed on attempt $attempt: $e');
-      if (attempt < maxRetries) {
-        await Future.delayed(delay);
-        continue;
-      }
-      rethrow;
-    }
-  }
-  
-  return null;
-}
-```
+Find detailed code examples and implementation guides for common tasks:
+
+- **[Signer Interface & Authentication](tools/recipes/signer-interface-authentication.md)** - Set up authentication, manage multiple accounts, and handle sign-in/sign-out flows
+- **[Building a Feed](tools/recipes/building-a-feed.md)** - Create reactive feeds with real-time updates and relationship loading
+- **[Creating Custom Event Kinds](tools/recipes/creating-custom-event-kinds.md)** - Extend the framework with your own event types and models
+- **[Using the `and` Operator for Relationships](tools/recipes/using-and-operator-relationships.md)** - Load and manage model relationships efficiently
+- **[Direct Messages & Encryption](tools/recipes/direct-messages-encryption.md)** - Implement encrypted messaging with NIP-04 and NIP-44
+- **[Working with DVMs (NIP-90)](tools/recipes/working-with-dvms.md)** - Integrate with Decentralized Virtual Machines for various services
 
 ## API Reference 📚
 
@@ -2832,40 +2185,6 @@ final complexQuery = query<Note>(
   },
 );
 ```
-
-### Model Types
-
-Available built-in models and their relationships.
-
-**Core Models:**
-- `Profile` (kind 0) - User profiles with metadata
-- `Note` (kind 1) - Text posts with reply threading
-- `ContactList` (kind 3) - Following/followers
-- `DirectMessage` (kind 4) - Encrypted private messages
-- `Repost` (kind 6) - Reposts of other notes (NIP-18)
-- `Reaction` (kind 7) - Emoji reactions to events
-- `ChatMessage` (kind 9) - Public chat messages
-
-**Content Models:**
-- `Article` (kind 30023) - Long-form articles
-- `App` (kind 32267) - App metadata and listings
-- `Release` (kind 30063) - Software releases
-- `FileMetadata` (kind 1063) - File information with release relationship
-- `SoftwareAsset` (kind 3063) - Software binaries
-
-**Social Models:**
-- `Community` (kind 10222) - Community definitions with chatMessages relationship
-- `TargetedPublication` (kind 30222) - Targeted content
-- `Comment` (kind 1111) - Comments on content
-
-**Monetization:**
-- `ZapRequest` (kind 9734) - Lightning payment requests
-- `Zap` (kind 9735) - Lightning payments
-
-**DVM Models:**
-- `VerifyReputationRequest` (kind 5312) - Reputation verification
-- `VerifyReputationResponse` (kind 6312) - Reputation results
-- `DVMError` (kind 7000) - DVM error responses
 
 ### Utilities
 
@@ -3014,9 +2333,9 @@ Handle storage errors and network failures gracefully.
 
 ```dart
 // Watch for storage errors
-ref.listen(storageNotifierProvider, (previous, next) {
-  if (next is StorageError) {
-    print('Storage error: ${next.exception}');
+ref.listen(storageNotifierProvider, (_, state) {
+  if (state is StorageError) {
+    print('Storage error: ${state.exception}');
     // Show error UI or retry logic
   }
 });
@@ -3077,6 +2396,3 @@ Contributions are welcome. However, please open an issue to discuss your propose
 ## License 📄
 
 MIT
-# CHANGELOG
-
- - Initial fork from mkstack
