@@ -41,7 +41,6 @@ switch (responseState) {
 
 ```dart
 // Define a custom DVM request model
-@GeneratePartialModel()
 class CustomDVMRequest extends RegularModel<CustomDVMRequest> {
   CustomDVMRequest.fromMap(super.map, super.ref) : super.fromMap();
   

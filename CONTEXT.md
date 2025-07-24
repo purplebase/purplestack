@@ -14,13 +14,11 @@ When a user makes the first prompt, and only during that very first prompt, you 
 
 The directory `tools/recipes` has a bunch of Markdown files with popular use-cases. **YOU _MUST_ REFER TO THESE FILES BEFORE IMPLEMENTING A NEW FEATURE**. If the information there is not present or sufficient, proceed as usual.
 
-### MCP Servers
-
-There are included MCP servers you may find helpful.
+### Available MCP Servers
 
 #### `developer` MCP Server
 
-The `developer` server provides development and debugging tools.
+Provides development and debugging tools.
 
 Use this server for:
 - Code generation and modification
@@ -30,7 +28,7 @@ Use this server for:
 
 #### `nostr` MCP Server
 
-The `nostr` server provides Nostr protocol reference and documentation. You MUST ALWAYS attempt to use the `models` package, following `tools/reference` Markdown documents for models. If a model does not exist, you MAY use this MCP server to understand how to create and register a new model.
+Provides Nostr protocol reference and documentation.
 
 Use this server for:
 - Understanding Nostr protocol specifications
@@ -949,9 +947,65 @@ Text(TimeUtils.formatTimestamp(note.createdAt))
 
 This project uses the `models` and `purplebase` packages which are the ONLY way to interact with the nostr network.
 
-**Always prioritize using models over the underlying `model.event` property.** Models provide rich methods, relationships, and domain-specific functionality. Only access the raw `event` property when model methods are insufficient or missing - for example, accessing custom tags not yet supported by the model interface.
+### ⚠️ CRITICAL: Model vs Direct Event Manipulation
+
+**ALWAYS use model constructors, setters, and relationships instead of direct `model.event` manipulation.**
+
+**❌ WRONG - Direct event manipulation (NOT good practice):**
+```dart
+// Don't do this - bypasses model interface and breaks abstraction
+note.event.addTag('custom', ['value']);
+note.event.tags.add(['t', 'farming']);
+note.event.content = 'modified content';
+
+// This creates inconsistent state and bypasses validation
+profile.event.tags.removeWhere((tag) => tag[0] == 'name');
+```
+
+**✅ CORRECT - Use model interface (PREFERRED approach):**
+```dart
+// Use proper model constructors with parameters
+final partialNote = PartialNote("content", tags: {'farming'});
+
+// Use model setters and methods
+final partialProfile = PartialProfile()
+  ..displayName = 'New Name'
+  ..about = 'Updated bio';
+
+// Use model relationships for complex data
+final note = PartialNote("reply content")
+  ..replyTo = originalNote;
+```
+
+**When `model.event` access is acceptable (ADVANCED CUSTOMIZATION ONLY):**
+- ✅ **Only within custom model class implementations**
+- ✅ **Only for accessing custom tags not yet supported by the model interface**
+- ✅ **Advanced customization by experienced developers who understand the implications**
+- ✅ **Reading (not modifying) raw event data for debugging**
+
+**Why avoid direct event manipulation:**
+- **Breaks encapsulation**: Bypasses model validation and type safety
+- **Creates inconsistent state**: Models may not reflect actual event data
+- **Harder maintenance**: Code becomes coupled to raw Nostr protocol details
+- **Debugging complexity**: Issues become harder to trace and fix
+- **Framework violations**: Goes against the local-first architecture principles
+
+**Always prioritize using models over the underlying `model.event` property.** Models provide rich methods, relationships, and domain-specific functionality that handle all the complexity for you.
+
+### ⚠️ CRITICAL: Use Existing Models First
+
+**BEFORE implementing ANY Nostr feature:**
+
+1. **Check existing models** in `tools/reference/` - complete documentation of all available models
+2. **Search all NIPs** using `mcp_nips_read_nips_index` tool to see existing kinds
+3. **Investigate thoroughly** with `mcp_nips_read_nip` for any potentially relevant NIPs
+4. **Only create custom kinds** after proving no existing solution works
+
+**Interoperability Warning**: Custom kinds mean your app won't work with existing Nostr clients and creates ecosystem fragmentation. This should be a last resort.
 
 ### Nostr Implementation Guidelines
+
+You **MUST** ALWAYS attempt to use the `models` package, following `tools/reference` Markdown documents for models. If a model does not exist, you MAY use the `nostr` MCP server to understand how to create and register a new model.
 
 - Always use the `mcp_nips_read_nips_index` tool before implementing any Nostr features to see what kinds are currently in use across all NIPs.
 - If any existing kind or NIP might offer the required functionality, use the `mcp_nips_read_nip` tool to investigate thoroughly. Several NIPs may need to be read before making a decision.
@@ -986,13 +1040,124 @@ When implementing features that could use existing NIPs, follow this decision fr
 **Example Decision Process**:
 ```
 Need: Equipment marketplace for farmers
-Options:
-1. NIP-15 (Marketplace) - Too structured for peer-to-peer sales
-2. NIP-99 (Classified Listings) - Good fit, can extend with farming tags
-3. Custom kind - Perfect fit but no interoperability
+Research Process:
+1. Check tools/reference/ for existing marketplace models
+2. Use mcp_nips_read_nips_index to find marketplace-related NIPs
+3. Investigate NIP-15 (Marketplace), NIP-99 (Classified Listings)
+4. Analysis: NIP-99 ClassifiedListing fits well, can extend with farming tags
 
-Decision: Use NIP-99 + farming-specific tags for best balance
+Decision: Use existing ClassifiedListing + farming-specific tags
+Result: Interoperable with other marketplace clients
 ```
+
+#### Creating Custom Event Kinds
+
+**⚠️ Last Resort Only**: Custom kinds should only be created after exhaustively researching existing options in `tools/reference/` and all relevant NIPs. Custom kinds sacrifice interoperability for perfect data modeling.
+
+Extend the system with your own models only when no existing model serves your needs.
+
+##### Basic Custom Model
+
+```dart
+class ClassifiedListing extends RegularModel<ClassifiedListing> {
+  ClassifiedListing.fromMap(super.map, super.ref) : super.fromMap();
+  
+  String? get title => event.getFirstTagValue('title');
+  String? get price => event.getFirstTagValue('price');
+  String get description => event.content;
+  DateTime? get publishedAt => 
+      event.getFirstTagValue('published_at')?.toInt()?.toDate();
+}
+
+class PartialClassifiedListing extends RegularPartialModel<ClassifiedListing> with PartialClassifiedListingMixin {
+  PartialClassifiedListing({
+    required String title,
+    required String description,
+    String? price,
+    DateTime? publishedAt,
+  }) {
+    event.content = description;
+    event.addTagValue('title', title);
+    if (price != null) event.addTagValue('price', price);
+    if (publishedAt != null) {
+      event.addTagValue('published_at', publishedAt.toSeconds().toString());
+    }
+  }
+}
+```
+
+##### Registering Custom Kinds
+
+```dart
+// Create a custom initialization provider
+final customInitializationProvider = FutureProvider((ref) async {
+  await ref.read(initializationProvider(StorageConfiguration()).future);
+  
+  // Register your custom models
+  Model.register(kind: 1055, constructor: ClassifiedListing.fromMap, partialConstructor: PartialClassifiedListing.fromMap);
+  
+  return true;
+});
+
+// Use this provider instead of the default one
+final initState = ref.watch(customInitializationProvider);
+```
+
+##### Using Custom Models
+
+```dart
+// Create and sign a classified listing
+final partialListing = PartialClassifiedListing(
+  title: 'John Deere Tractor',
+  description: 'Excellent condition, low hours, ready for farming season.',
+  price: '25000',
+  publishedAt: DateTime.now(),
+);
+
+final signedListing = await partialListing.signWith(signer);
+
+// Save to storage
+await ref.storage.save({signedListing});
+
+// Publish to relays
+await ref.storage.publish({signedListing});
+
+// Query listings
+final listingsState = ref.watch(
+  query<ClassifiedListing>(
+    authors: {signer.pubkey},
+    limit: 10,
+  ),
+);
+```
+
+##### Different Model Types
+
+```dart
+// Regular events (kind 1-9999)
+class RegularEvent extends RegularModel<RegularEvent> {
+  RegularEvent.fromMap(super.map, super.ref) : super.fromMap();
+}
+
+// Replaceable events (kind 0, 3, 10000-19999)
+class ReplaceableEvent extends ReplaceableModel<ReplaceableEvent> {
+  ReplaceableEvent.fromMap(super.map, super.ref) : super.fromMap();
+}
+
+// Parameterizable replaceable events (kind 30000-39999)
+class ParameterizableEvent extends ParameterizableReplaceableModel<ParameterizableEvent> {
+  ParameterizableEvent.fromMap(super.map, super.ref) : super.fromMap();
+  
+  String get identifier => event.identifier; // d-tag value
+}
+
+// Ephemeral events (kind 20000-29999)
+class EphemeralEvent extends EphemeralModel<EphemeralEvent> {
+  EphemeralEvent.fromMap(super.map, super.ref) : super.fromMap();
+}
+```
+
+
 
 #### Tag Design Principles
 
@@ -1051,6 +1216,7 @@ await ref.storage.publish([note]);
 // Querying community content
 final notes = await ref.storage.query(RequestFilter<Note>(tags: {'#t': {'farming'}}, limit: 20).toRequest());
 ```
+
 
 ### Kind Ranges
 
@@ -1341,6 +1507,12 @@ NoteParser.parse(
 - Graceful fallbacks when callbacks return `null`
 
 **Important**: Any time you display note content (kind 1, kind 11, kind 1111), you MUST use this instead of displaying raw text.
+
+### Zaps and Lightning Payments
+
+**NWC (Nostr Wallet Connect) Support**: Lightning payments and zaps are fully supported through NWC integration. For complete documentation on implementing NWC for zaps, see `tools/reference/nwc.md`.
+
+NWC enables secure Lightning wallet connections without exposing private wallet credentials to the application. Users can connect their Lightning wallets (like Alby, Zeus, or Mutiny) to send zaps directly from your Nostr application.
 
 ### Displaying Engagement Information
 
