@@ -7,6 +7,15 @@ const String kOriginalAppId = 'com.example.purplestack';
 const String kOriginalAppName = 'Purplestack';
 const String kOriginalAppNameSnakeCase = 'purplestack';
 
+/// Converts a string to PascalCase (removes spaces and capitalizes each word)
+String _toPascalCase(String input) {
+  return input
+      .split(RegExp(r'[\s_-]+')) // Split on spaces, underscores, and hyphens
+      .where((word) => word.isNotEmpty)
+      .map((word) => word[0].toUpperCase() + word.substring(1).toLowerCase())
+      .join('');
+}
+
 void main(List<String> args) async {
   final parser = ArgParser()
     ..addOption('name', abbr: 'n', help: 'App display name')
@@ -80,6 +89,9 @@ void main(List<String> args) async {
   final appId = results['app-id'] as String;
   final appDescription = results['description'] as String?;
   final appVersion = results['version'] as String? ?? '0.1.0';
+
+  // Create PascalCase version for Dart code (removes spaces, capitalizes each word)
+  final appNamePascalCase = _toPascalCase(appName);
   final iconPath = results['icon'] as String?;
   final adaptiveBackground = results['adaptive-background'] as String?;
   final adaptiveForeground = results['adaptive-foreground'] as String?;
@@ -129,6 +141,7 @@ void main(List<String> args) async {
   print('Renaming Electric app...');
   print('Original App ID: $kOriginalAppId → $appId');
   print('Original App Name: $kOriginalAppName → $appName');
+  print('App Name (PascalCase): $appNamePascalCase');
   print('Original Snake Case: $kOriginalAppNameSnakeCase → $appNameSnakeCase');
   if (appDescription != null) print('Description: $appDescription');
   print('Version: $appVersion');
@@ -147,6 +160,7 @@ void main(List<String> args) async {
 
   final renamer = AppRenamer(
     appName,
+    appNamePascalCase,
     appId,
     appNameSnakeCase,
     appDescription,
@@ -192,7 +206,9 @@ void _printUsage(ArgParser parser) {
   print('(excludes tools/ directory)');
   print('and replace:');
   print('- "$kOriginalAppId" with your new app ID (FIRST)');
-  print('- "$kOriginalAppName" with your new app name');
+  print(
+    '- "$kOriginalAppName" with your new app name in PascalCase (for code)',
+  );
   print('- "$kOriginalAppNameSnakeCase" with your new app name in snake_case');
   print('- "com.example" with your new app name (LAST)');
   print('- pubspec.yaml name, description, and version fields specifically');
@@ -200,9 +216,9 @@ void _printUsage(ArgParser parser) {
   print('Options:');
   print(parser.usage);
   print('\nExamples:');
-  print('  # Basic rename');
+  print('  # Basic rename (spaces in name are allowed)');
   print(
-    '  dart rename_app.dart --name "My App" --app-id "com.mycompany.myapp"',
+    '  dart rename_app.dart --name "My Super App" --app-id "com.mycompany.myapp"',
   );
   print('');
   print('  # With description and version');
@@ -227,6 +243,7 @@ void _printUsage(ArgParser parser) {
 
 class AppRenamer {
   final String appName;
+  final String appNamePascalCase;
   final String appId;
   final String appNameSnakeCase;
   final String? appDescription;
@@ -239,6 +256,7 @@ class AppRenamer {
 
   AppRenamer(
     this.appName,
+    this.appNamePascalCase,
     this.appId,
     this.appNameSnakeCase,
     this.appDescription,
@@ -341,8 +359,18 @@ class AppRenamer {
 
       // Perform exact string replacements - APP ID FIRST!
       content = content.replaceAll(kOriginalAppId, appId);
-      content = content.replaceAll(kOriginalAppName, appName);
+
+      // Use PascalCase for Dart code identifiers (no spaces)
+      content = content.replaceAll(kOriginalAppName, appNamePascalCase);
       content = content.replaceAll(kOriginalAppNameSnakeCase, appNameSnakeCase);
+
+      // For display names in platform files, we might want the full name with spaces
+      // Check if this is a platform-specific file that needs display names
+      if (_shouldUseDisplayName(file.path)) {
+        // In platform files, replace PascalCase back with display name for labels
+        content = content.replaceAll(appNamePascalCase, appName);
+      }
+
       content = content.replaceAll('com.example', appName);
 
       // Write back if content changed
@@ -357,6 +385,16 @@ class AppRenamer {
       // Skip binary files or files we can't read/write
       return false;
     }
+  }
+
+  /// Determines if a file should use the display name (with spaces) instead of PascalCase
+  /// Platform files like AndroidManifest.xml and Info.plist need display names for labels
+  bool _shouldUseDisplayName(String filePath) {
+    return filePath.contains('AndroidManifest.xml') ||
+        filePath.contains('Info.plist') ||
+        filePath.contains('strings.xml') ||
+        filePath.contains('.xml') && filePath.contains('android') ||
+        filePath.endsWith('.plist');
   }
 
   bool _hasIconPaths() {
