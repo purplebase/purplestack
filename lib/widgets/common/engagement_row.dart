@@ -129,9 +129,8 @@ class _EngagementItem extends StatelessWidget {
 
     final displayIcon = isActive && activeIcon != null ? activeIcon! : icon;
 
-    return InkWell(
+    return GestureDetector(
       onTap: isLoading ? null : onTap,
-      borderRadius: BorderRadius.circular(8),
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
         child: Row(
