@@ -4,21 +4,17 @@ Development stack designed for AI agents to build Nostr-enabled Flutter applicat
 
 ## CRITICAL FOR AI ASSISTANTS - MUST READ FIRST
 
-**Reference**. The AI assistant's behavior and knowledge is defined by the `CONTEXT.md` file (aliased to other IDE-specific filenames), which serves as the system prompt. **ALWAYS** refer to this document and follow these rules and recommendations.
-
-### First prompt
-
-When a user makes the first prompt, and only during that very first prompt, you MUST ALWAYS summarize what you understood, and ask important questions to ensure all requirements are crystal clear before starting to code. Do NOT skip this first step. Suggest the user an app name, app ID (e.g., `com.sample.app`) and description. Based on obtained information, you MUST call the `rename_app` tool (`dart tools/bin/rename_app.dart --name "Your App Name" --app-id "com.sample.app"` – full reference in the `recipes/renaming-app.md` file).
+**Reference**. The AI assistant's behavior and knowledge is defined by this context file (aliased to other IDE-specific filenames), which serves as the system prompt. **ALWAYS** refer to this document and follow these rules and recommendations.
 
 ### Recipes
 
 The directory `tools/recipes` has a bunch of Markdown files with popular use-cases. **YOU _MUST_ REFER TO THESE FILES BEFORE IMPLEMENTING A NEW FEATURE**. If the information there is not present or sufficient, proceed as usual.
 
-### Available MCP Servers
+### MCP Servers
 
 #### `developer` MCP Server
 
-Provides development and debugging tools.
+Provides development and debugging tools – unless already provided by the current agent IDE.
 
 Use this server for:
 - Code generation and modification
@@ -30,12 +26,16 @@ Use this server for:
 
 Provides Nostr protocol reference and documentation.
 
-Use this server for:
-- Understanding Nostr protocol specifications
-- Finding appropriate event kinds for features
-- Learning tag usage patterns
-- Ensuring compliance with Nostr standards
-- Researching existing solutions before creating custom kinds
+### First prompt
+
+**Do NOT skip this first step.**
+
+When a user makes the first prompt, and only during that very first prompt, you MUST ALWAYS:
+
+ - Summarize what you understood, and ask important questions to ensure all requirements are crystal clear before starting any code
+ - Ask them which outputs they want. By default, this project builds an Android app, but Flutter supports iOS, MacOS, Linux and Windows, all of these are preconfigured. **Remove the whole folders** of platforms that the user does not care about.
+ - Suggest the user an app name, app ID (e.g., `com.sample.app`) and description. Based on obtained information, you MUST call the `rename_app` tool (`dart tools/bin/rename_app.dart --name "Your App Name" --app-id "com.sample.app"` – full reference in the `tools/recipes/renaming-app.md` file).
+
 
 ## Technology Stack
 
@@ -110,7 +110,7 @@ This is a standard Flutter app with multi-platform support, but here are additio
 - `lib/screens`: Screen components used by the router
 - `lib/utils`: Utility functions and shared logic
 - `test/utils`: Testing utilities
-- `assets`: Static assets
+- `assets`: Static assets (remember to add any referenced assets to `pubspec.yaml`)
 
 ## UI Components
 
@@ -410,6 +410,8 @@ The project uses a GoRouter with a centralized routing configuration in `router.
 
 **Use skeleton loading** for structured content (feeds, profiles, forms). **Use spinners** only for buttons or short operations.
 
+**Pull-to-Refresh**: DO NOT use pull-to-refresh when streaming data. Streaming already refreshes automatically via the request notifier, making pull-to-refresh redundant and potentially confusing.
+
 ```dart
 // Skeleton loading example for a card list
 ListView.builder(
@@ -547,6 +549,7 @@ When users specify color schemes, use Material 3's color system:
 ### Component Styling Patterns
 
 - Follow Material 3 design patterns and component variants
+- **Always prioritize using Theme colors**: Fetch colors from `Theme.of(context).colorScheme` unless they don't fit the theme
 - Use theme-based styling: `Theme.of(context).colorScheme.primary`
 - Implement responsive design with breakpoints
 - Add hover and focus states for interactive elements
@@ -665,6 +668,16 @@ For correct app name, app ID, and icon generation for all platforms, follow `too
 
 When building Flutter apps for Android distribution, always use the optimized ARM64 build: `fvm flutter build apk --target-platform android-arm64` (this is the only platform that matters for modern Android devices).
 
+For distribution, consider using [Zapstore](https://zapstore.dev) - a decentralized app store built on Nostr.
+
+### README Guidelines
+
+The README file should be short and concise:
+- Remove "Purplestack" from the title
+- Include 1-2 paragraphs describing the app and its features
+- Brief instructions on how to run in development (no extensive technical details)
+- Footer should read: "Powered by [Purplestack](https://purplestack.io)"
+
 ## Code Guidelines
 
 ### Code Style
@@ -707,16 +720,18 @@ When building Flutter apps for Android distribution, always use the optimized AR
   - Do not create simple wrappers around providers, i.e. wrapping one other provider without adding any value
   - **Listening to model streams**: When a model from a stream needs to be listened to, use `ref.listen(query(...))` with a Completer for proper async handling:
     ```dart
-    // ✅ Correct pattern for listening to model changes
+    // ✅ Correct pattern for listening to model changes (in this case the `source` argument must have stream: true)
     final completer = Completer<Note>();
-    ref.listen(query<Note>(ids: {noteId}), (previous, next) {
-      if (next.hasValue && next.value!.isNotEmpty) {
-        completer.complete(next.value!.first);
-      }
+    ref.listen(query<Note>(ids: {noteId}), (_, state) {
+      if (state case StorageData(:final models)
+            when models.isNotEmpty && ... && !completer.isCompleted) {
+          completer.complete(models.first);
+        }
     });
     final note = await completer.future;
     ```
 - Component-based architecture, with shared components in `lib/widgets`
+- **SafeArea**: Always use `SafeArea` by default in widgets up the hierarchy to handle device notches and system UI
 - Follows Material 3 design system and component patterns
 - Keep widgets of small or medium size and focused
 - Use Dart constants for magic numbers and strings (`kConstant`)
@@ -727,9 +742,9 @@ When building Flutter apps for Android distribution, always use the optimized AR
 
 ### Common Widget Architecture
 
-**⚠️ DO NOT MODIFY WIDGETS IN `lib/widgets/common/` WITH APP-SPECIFIC BEHAVIOR**
+The widgets in the `lib/widgets/common` folder are generic, reusable components that must remain pure and framework-agnostic. These widgets serve as the foundation layer for all Purplestack applications.
 
-The widgets in the `common` folder are generic, reusable components that must remain pure and framework-agnostic. These widgets serve as the foundation layer for all Purplestack applications.
+**Do not modify common widgets with app-specific behavior; if absolutely necessary do modify them with generic behavior**.
 
 #### What Makes a Widget "Generic" vs "App-Specific"
 
@@ -1002,6 +1017,8 @@ final note = PartialNote("reply content")
 4. **Only create custom kinds** after proving no existing solution works
 
 **Interoperability Warning**: Custom kinds mean your app won't work with existing Nostr clients and creates ecosystem fragmentation. This should be a last resort.
+
+**Posts vs Notes**: Users may refer to "posts" when they mean "notes" (kind 1). These are synonyms. When users ask for posts, understand they mean notes. Always prevent creating new kinds - if a post scheduler is requested, create a scheduler for Note, not a new PostScheduler model.
 
 ### Nostr Implementation Guidelines
 
@@ -1292,6 +1309,8 @@ await ref.read(storageNotifierProvider.notifier).save({model});
 
 **Do not call query**, especially with many relationships inside loops! If you need relationship loading, use `and` and loop there - it will have the chance to optimize data loading and relay requests.
 
+**Relationship Usage**: Use synchronous relationships (`.value`, `.toList()`) in widgets for immediate rendering. Use asynchronous relationships (`.valueAsync`, `.toListAsync()`) in callbacks and other non-widget contexts.
+
 Use the default `source` argument unless otherwise requested.
 
 See [#models 👯](#models-) reference below.
@@ -1406,6 +1425,15 @@ await ref.read(amberSignerProvider).attemptAutoSignIn();
 ```
 
 This method will silently attempt to restore the user's previous session without requiring user interaction.
+
+**Temporary/Utility Signers:**
+
+When creating temporary or utility signers that are not user-initiated (not under user control), use `registerSigner: false`:
+
+```dart
+// For temporary operations or background processing
+final utilitySigner = Bip340PrivateKeySigner(privateKey, ref, registerSigner: false);
+```
 
 See "Signer Interface & Authentication" in the [#models 👯](#models-) reference below for more.
 
@@ -1730,25 +1758,29 @@ await ref.storage.publish({signedNote});
 
 ### Nostr Encryption and Decryption
 
+**⚠️ CRITICAL: Always Use NIP-44 Encryption**
+
+**NIP-44 is the modern, secure encryption standard and should ALWAYS be your first choice.** NIP-04 is older, less secure, and should only be used when explicitly requested by the user or for compatibility with legacy systems.
+
 The `Signer` interface has methods for:
 
- - `nip04Encrypt`
- - `nip04Decrypt`
- - `nip44Encrypt`
- - `nip44Decrypt`
+ - `nip44Encrypt` ✅ **USE THIS - Modern, secure encryption**
+ - `nip44Decrypt` ✅ **USE THIS - Modern, secure decryption**
+ - `nip04Encrypt` ⚠️ **Legacy only - use only when specifically needed**
+ - `nip04Decrypt` ⚠️ **Legacy only - use only when specifically needed**
 
 Signers can be obtained via the `signerProvider` family or `activeSignerProvider`.
 
-The signer's nip44 methods handle all cryptographic operations internally, including key derivation and conversation key management, so you never need direct access to private keys. Always use the signer interface for encryption rather than requesting private keys from users, as this maintains security and follows best practices.
+The signer's encryption methods handle all cryptographic operations internally, including key derivation and conversation key management, so you never need direct access to private keys. Always use the signer interface for encryption rather than requesting private keys from users, as this maintains security and follows best practices.
 
-**NIP-04 Encryption Example:**
+**NIP-44 Encryption Example (ALWAYS USE THIS):**
 ```dart
-// Encrypt a message using NIP-04
+// ✅ PREFERRED: Encrypt a message using NIP-44 (modern, secure)
 final signer = ref.read(Signer.activeSignerProvider);
 final recipientPubkey = 'npub1abc123...';
 
-// Encrypt the message
-final encryptedContent = await signer.nip04Encrypt(
+// Encrypt the message with NIP-44
+final encryptedContent = await signer.nip44Encrypt(
   message: 'Hello, this is a secret message!',
   recipientPubkey: recipientPubkey,
 );
@@ -1763,14 +1795,14 @@ final signedDm = await dm.signWith(signer);
 await ref.storage.save({signedDm});
 ```
 
-**NIP-44 Encryption Example (Recommended):**
+**NIP-04 Encryption Example (LEGACY ONLY):**
 ```dart
-// Encrypt a message using NIP-44 (more secure)
+// ⚠️ LEGACY: Only use NIP-04 when specifically requested or for compatibility
 final signer = ref.read(Signer.activeSignerProvider);
 final recipientPubkey = 'npub1abc123...';
 
-// Encrypt the message with NIP-44
-final encryptedContent = await signer.nip44Encrypt(
+// Encrypt the message using legacy NIP-04
+final encryptedContent = await signer.nip04Encrypt(
   message: 'Hello, this is a secret message!',
   recipientPubkey: recipientPubkey,
 );
@@ -1831,13 +1863,21 @@ class MessageTile extends StatelessWidget {
 ```
 
 **Key Differences:**
-- **NIP-04**: Legacy encryption method, simpler but less secure
-- **NIP-44**: Modern encryption with better security, forward secrecy, and metadata protection
-- Always prefer NIP-44 for new applications unless compatibility with older clients is required
+- **NIP-44**: ✅ **DEFAULT CHOICE** - Modern encryption with superior security, forward secrecy, and metadata protection
+- **NIP-04**: ⚠️ **LEGACY ONLY** - Older encryption method with known security limitations
+- **ALWAYS use NIP-44 for all new implementations** unless the user explicitly requests NIP-04 compatibility
 
 ### Custom data
 
 Any time you need to store custom data, use the `CustomData` model from the `models` package. Use `setProperty` to set tags, and feel free to use encryption as defined above for sensitive data (NWC strings, cashu tokens, for example).
+
+**User Preferences and Settings**: Always use `CustomData` for storing user preferences, app settings, and configuration data instead of other storage methods.
+
+**Clear App Data**: To clear all app data during development or for user logout, use:
+
+```dart
+await ref.storage.clear();
+```
 
 ## Error Handling and Debugging
 
@@ -1858,12 +1898,6 @@ The underlying `models` implementation (via the `purplebase` package) automatica
 For debugging and monitoring, Purplebase exposes the `infoNotifierProvider` which streams diagnostic messages about the Nostr operations. This is the primary tool for debugging storage and relay pool issues:
 
 ```dart
-// Listen to debug info in your app
-ref.listen(infoNotifierProvider, (previous, next) {
-  print('Nostr Debug: $next');
-  // Or display in a debug screen, log to file, etc.
-});
-
 // Example: Display debug info in a debug screen
 class DebugScreen extends ConsumerWidget {
   @override
@@ -1914,9 +1948,9 @@ await signer.signIn();
 // When app closes, private key is lost and user must re-enter
 ```
 
-#### Persistent Key Storage
+#### Persistent Key Storage specifically for nsec
 
-If the user specifically requests persistent nsec signing, use the `flutter_secure_storage` package. Do NOT use this storage for regular data storage, use `CustomData` as instructed before.
+If the user specifically requests persistent **nsec** signing, use the `flutter_secure_storage` package. Do NOT use this storage for any other kind of data storage, use `CustomData` as instructed before.
 
 ```dart
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
@@ -1958,613 +1992,3 @@ class SecureSignerManager {
 Nostr text notes (kind 1, 11, and 1111) have a plaintext `content` field that may contain URLs, hashtags, and Nostr URIs.
 
 Use the `NoteParser` class (and utilities in the `note_parser.dart` file) for this.
-# models 👯
-
-Fast local-first nostr framework designed to make developers (and vibe-coders) happy. Written in Dart.
-
-It provides:
- - Domain-specific models that wrap common nostr event kinds (with relationships between them)
- - A local-first model storage and relay interface, leveraging reactive Riverpod providers
- - Easy extensibility
-
-> 📚 **For practical recipes and examples, check out [Purplestack](https://github.com/purplebase/purplestack)**, an agentic development stack for building Nostr-enabled Flutter applications - the best way to use this package with ready-to-use app templates and patterns.
->
-> 📖 **Per-model documentation** is available in the [`docs/`](docs/) directory with detailed API references and usage examples.
-
-An offline-ready app with reactions/zaps in a few lines of code:
-
-```dart
-Widget build(BuildContext context, WidgetRef ref) {
-  final value = ref.watch(
-    query<Note>(
-      limit: 10,
-      authors: {npub1, npub2, npub3, ...},
-      and: (note) => {note.author, note.reactions, note.zaps},
-    ),
-  );
-  // ...
-  Column(children: [
-    for (final note in value.models)
-      NoteCard(
-        userName: note.author.value!.nameOrNpub,
-        noteText: note.content,
-        timestamp: note.createdAt,
-        likes: note.reactions.length,
-        zaps: note.zaps.length,
-        zapAmount: note.zaps.toList().fold(0, (acc, e) => acc += e.amount),
-      )
-  ])
-```
-
-Current implementations:
-  - Dummy: In-memory storage and relay, for testing and prototyping (default, included)
-  - [Purplebase](https://github.com/purplebase/purplebase): SQLite-powered storage and an efficient relay pool
-
-## Features ✨
-
- - **Domain models**: Instead of NIP-jargon, use type-safe classes with domain language to interact with nostr, many common nostr event kinds are available (or bring your own)
- - **Relationships**: Smoothly navigate local storage with model relationships
- - **Watchable queries**: Reactive querying interface with a familiar nostr request filter API
- - **Signers**: Construct new nostr events and sign them using Amber (Android) and other NIP-55 signers available via external packages
- - **Reactive signed-in profile provider**: Keep track of signed in pubkeys and the current active user in your application
- - **Dummy implementation**: Plug-and-play implementation for testing/prototyping, easily generate dummy profiles, notes, and even a whole feed
- - **Raw events**: Access lower-level nostr event data (`event` property on all models)
- - and much more
-
-## Installation 🛠️
-
-Add the dependency to your `pubspec.yaml`:
-
-```yaml
-dependencies:
-  models:
-    git: # git until we put it on pub.dev
-      url: https://github.com/purplebase/models
-      ref: main
-```
-
-Then run `dart pub get` or `flutter pub get`.
-
-## Table of Contents 📜
-
-- [Core Concepts 🧠](#core-concepts-)
-  - [Models & Partial Models](#models--partial-models)
-  - [Relationships](#relationships)
-  - [Querying](#querying)
-  - [Storage & Relays](#storage--relays)
-  - [Source Behavior](#source-behavior)
-- [API Reference 📚](#api-reference-)
-  - [Storage Configuration](#storage-configuration)
-  - [Query Filters](#query-filters)
-  - [Utilities](#utilities)
-  - [Event Verification](#event-verification)
-  - [Error Handling](#error-handling)
-- [Design Notes 📝](#design-notes-)
-- [Contributing 🙏](#contributing-)
-- [License 📄](#license-)
-
-## NIP Implementation Status 📋
-
-- [x] **NIP-01: Basic protocol flow description**
-- [x] **NIP-02: Follow List**
-- [x] **NIP-04: Encrypted Direct Message**
-- [x] **NIP-05: Mapping Nostr keys to DNS-based internet identifiers**
-- [x] **NIP-09: Event Deletion Request**
-- [x] **NIP-10: Text Notes and Threads**
-- [x] **NIP-11: Relay Information Document**
-- [x] **NIP-18: Reposts**
-- [x] **NIP-19: bech32-encoded entities**
-- [x] **NIP-21: `nostr:` URI scheme**
-- [x] **NIP-22: Comment**
-- [x] **NIP-23: Long-form Content**
-- [x] **NIP-25: Reactions**
-- [x] **NIP-28: Public Chat**
-- [x] **NIP-29: Relay-based Groups**
-- [x] **NIP-39: External Identities in Profiles**
-- [x] **NIP-42: Authentication of clients to relays**
-- [x] **NIP-44: Encrypted Payloads (Versioned)**
-- [x] **NIP-51: Lists**
-- [x] **NIP-55: Android Signer Application**
-- [x] **NIP-57: Lightning Zaps**
-- [x] **NIP-65: Relay List Metadata**
-- [x] **NIP-72: Moderated Communities (Reddit Style)**
-- [x] **NIP-78: Arbitrary custom app data**
-- [x] **NIP-82: Application metadata, releases, assets** _(draft)_
-- [x] **NIP-90: Data Vending Machine**
-- [x] **NIP-94: File Metadata**
-- [x] **NIP-47: Nostr Wallet Connect** - Complete implementation with connection management, commands, and secure storage
-
-## Core Concepts 🧠
-
-### Models & Partial Models
-
-Models represent signed, immutable nostr events with domain-specific properties. Each model has a corresponding `PartialModel` for creation and signing.
-
-```dart
-// Immutable, signed model
-final note = Note.fromMap(eventData, ref);
-print(note.content); // Access domain properties
-
-// Mutable, unsigned partial model for creation
-final partialNote = PartialNote('Hello, nostr!');
-final signedNote = await partialNote.signWith(signer);
-```
-
-**Converting Models to Partial Models:**
-
-Models can be converted back to editable partial models using the `toPartial()` method:
-
-```dart
-// Load an existing note
-final note = await ref.storage.get<Note>(noteId);
-
-// Convert to partial for editing
-final partialNote = note.toPartial<PartialNote>();
-
-// Modify and re-sign
-partialNote.content = 'Updated content';
-final updatedNote = await partialNote.signWith(signer);
-```
-
-**Important Notes:**
-- All public APIs work with "models" (all of which can access the underlying nostr event representation via `model.event`)
-- All notifier events are already emitted sorted by `created_at` by the framework - no need to sort again
-
-### Relationships
-
-Models automatically establish relationships with other models:
-
-```dart
-// One-to-one relationship (BelongsTo<Profile>)
-final author = note.author.value;
-
-// One-to-many relationships (HasMany<Reaction>, HasMany<Zap>)
-final reactions = note.reactions.toList();
-final zaps = note.zaps.toList();
-```
-
-### Querying
-
-Use the `query` function to reactively watch for models:
-
-```dart
-final notesState = ref.watch(
-  query<Note>(
-    authors: {userPubkey},
-    limit: 20,
-    since: DateTime.now().subtract(Duration(days: 7)),
-  ),
-);
-
-// Access models and handle loading/error states
-switch (notesState) {
-  case StorageLoading():
-    return CircularProgressIndicator();
-  case StorageError():
-    return Text('Error loading notes');
-  case StorageData():
-    return ListView.builder(
-      itemCount: notesState.models.length,
-      itemBuilder: (context, index) => NoteCard(notesState.models[index]),
-    );
-}
-```
-
-### Storage & Relays
-
-Storage provides a unified interface for local persistence and relay communication:
-
-```dart
-// Save locally
-await note.save();
-
-// Publish to relays
-await note.publish(source: RemoteSource(group: 'social'));
-
-// Query from local storage only
-final localNotes = await ref.storage.query(
-  RequestFilter<Note>(authors: {pubkey}).toRequest(),
-  source: LocalSource(),
-);
-
-// Query from relays only
-final remoteNotes = await ref.storage.query(
-  RequestFilter<Note>(authors: {pubkey}).toRequest(),
-  source: RemoteSource(),
-);
-
-// Query locally and from relays in the background
-final remoteNotes = await ref.storage.query(
-  RequestFilter<Note>(authors: {pubkey}).toRequest(),
-  source: LocalAndRemoteSource(background: true),
-);
-```
-
-Note that `background: false` means waiting for EOSE. The streaming phase is always in the background.
-
-### Source Behavior
-
-The `Source` parameter controls where data comes from and how queries behave:
-
-**LocalSource**: Only query local storage, never contact relays
-```dart
-source: LocalSource()
-```
-
-**RemoteSource**: Only query relays, never use local storage
-```dart
-source: RemoteSource(
-  group: 'social',        // Use specific relay group (defaults to 'default')
-  relayUrls: {            // Custom relay URLs (overrides group)
-    'wss://custom1.relay.io',
-    'wss://custom2.relay.io',
-  },
-  stream: true,           // Enable streaming (default)
-  background: false,      // Wait for EOSE before returning
-)
-```
-
-**LocalAndRemoteSource**: Query both local storage and relays
-```dart
-source: LocalAndRemoteSource(
-  group: 'social',        // Use specific relay group (defaults to 'default')
-  relayUrls: {            // Custom relay URLs (overrides group)
-    'wss://priority.relay.io',
-  },
-  stream: true,           // Enable streaming (default)
-  background: true,       // Don't wait for EOSE
-)
-```
-
-**Relay Selection Priority**:
-1. **`relayUrls`** - When provided, these specific relay URLs are used
-2. **`group`** - Falls back to the relay group defined in `StorageConfiguration`
-3. **`defaultRelayGroup`** - Uses the default group when neither is specified
-
-This provides flexibility between:
-- **Initialization-time groups**: Define stable relay collections in `StorageConfiguration.relayGroups`
-- **Runtime flexibility**: Override with specific `relayUrls` for individual queries
-
-```dart
-// Use predefined relay groups (configured at initialization)
-final socialNotes = ref.watch(
-  query<Note>(
-    authors: {pubkey},
-    source: RemoteSource(group: 'social'),
-  ),
-);
-
-// Override with custom relays at runtime
-final privateNotes = ref.watch(
-  query<Note>(
-    authors: {pubkey},
-    source: RemoteSource(
-      relayUrls: {'wss://my-private-relay.com'},
-    ),
-  ),
-);
-
-// Combine local storage with custom relays
-final hybridQuery = ref.watch(
-  query<Note>(
-    authors: {pubkey},
-    source: LocalAndRemoteSource(
-      relayUrls: {'wss://fast-relay.io', 'wss://backup-relay.io'},
-      background: true,
-    ),
-  ),
-);
-```
-
-**Query Behavior**:
-- All queries block until local storage returns results
-- If `background: false`, queries additionally block until EOSE from relays
-- If `background: true`, queries return immediately after local results, relay results stream in
-- The streaming phase never blocks regardless of `background` setting
-
-## Recipes 🍳
-
-Find detailed code examples and implementation guides for common tasks:
-
-- **[Signer Interface & Authentication](tools/recipes/signer-interface-authentication.md)** - Set up authentication, manage multiple accounts, and handle sign-in/sign-out flows
-- **[Building a Feed](tools/recipes/building-a-feed.md)** - Create reactive feeds with real-time updates and relationship loading
-- **[Creating Custom Event Kinds](tools/recipes/creating-custom-event-kinds.md)** - Extend the framework with your own event types and models
-- **[Using the `and` Operator for Relationships](tools/recipes/using-and-operator-relationships.md)** - Load and manage model relationships efficiently
-- **[Direct Messages & Encryption](tools/recipes/direct-messages-encryption.md)** - Implement encrypted messaging with NIP-04 and NIP-44
-- **[Working with DVMs (NIP-90)](tools/recipes/working-with-dvms.md)** - Integrate with Decentralized Virtual Machines for various services
-
-## API Reference 📚
-
-### Storage Configuration
-
-Configure storage behavior and relay connections.
-
-```dart
-final config = StorageConfiguration(
-  // Database path (null for in-memory)
-  databasePath: '/path/to/database.sqlite',
-  
-  // Whether to keep signatures in local storage
-  keepSignatures: false,
-  
-  // Whether to skip BIP-340 verification
-  skipVerification: false,
-  
-  // Relay groups
-  relayGroups: {
-    'popular': {
-      'wss://relay.damus.io',
-      'wss://relay.primal.net',
-    },
-    'private': {
-      'wss://my-private-relay.com',
-    },
-  },
-  
-  // Default relay group
-  defaultRelayGroup: 'popular',
-  
-  // Default source for queries when not specified
-  defaultQuerySource: LocalAndRemoteSource(stream: false),
-  
-  // Connection timeouts
-  idleTimeout: Duration(minutes: 5),
-  responseTimeout: Duration(seconds: 6),
-  
-  // Streaming configuration
-  streamingBufferWindow: Duration(seconds: 2),
-  
-  // Storage limits
-  keepMaxModels: 20000,
-);
-```
-
-### Query Filters
-
-Build complex queries with multiple conditions.
-
-```dart
-// Basic filters
-final basicQuery = query<Note>(
-  authors: {pubkey1, pubkey2},
-  limit: 50,
-  since: DateTime.now().subtract(Duration(days: 7)),
-);
-
-// Tag-based filters
-final tagQuery = query<Note>(
-  tags: {
-    '#t': {'nostr', 'flutter'},
-    '#e': {noteId},
-  },
-);
-
-// Search queries
-final searchQuery = query<Note>(
-  search: 'hello world',
-  limit: 20,
-);
-
-// Complex filters with relationships
-final complexQuery = query<Note>(
-  authors: {pubkey},
-  kinds: {1, 6}, // Notes and reposts
-  since: DateTime.now().subtract(Duration(hours: 24)),
-  and: (note) => {
-    note.author,
-    note.reactions,
-    note.zaps,
-  },
-);
-```
-
-### Utilities
-
-The `Utils` class provides essential nostr-related utilities.
-
-**Key Management:**
-```dart
-// Generate cryptographically secure random hex
-final randomHex = Utils.generateRandomHex64();
-
-// Derive public key from private key
-final pubkey = Utils.derivePublicKey(privateKey);
-```
-
-**NIP-19 Encoding/Decoding:**
-```dart
-// Encode simple entities
-final npub = Utils.encodeShareableFromString(pubkey, type: 'npub');
-final nsec = Utils.encodeShareableFromString(privateKey, type: 'nsec');
-final note = Utils.encodeShareableFromString(eventId, type: 'note');
-
-// Decode simple entities
-final decodedPubkey = Utils.decodeShareableToString(npub);
-final decodedPrivateKey = Utils.decodeShareableToString(nsec); // nsec is always decoded as a string
-final decodedEventId = Utils.decodeShareableToString(note);
-```
-
-**Complex Shareable Identifiers:**
-```dart
-// Encode complex identifiers with metadata
-final profileInput = ProfileInput(
-  pubkey: pubkey,
-  relays: ['wss://relay.damus.io'],
-  author: author,
-  kind: 0,
-);
-final nprofile = Utils.encodeShareableIdentifier(profileInput);
-
-final eventInput = EventInput(
-  eventId: eventId,
-  relays: ['wss://relay.damus.io'],
-  author: author,
-  kind: 1,
-);
-final nevent = Utils.encodeShareableIdentifier(eventInput);
-
-final addressInput = AddressInput(
-  identifier: 'my-article',
-  relays: ['wss://relay.damus.io'],
-  author: author,
-  kind: 30023,
-);
-final naddr = Utils.encodeShareableIdentifier(addressInput);
-
-// Decode complex identifiers
-final profileData = Utils.decodeShareableIdentifier(nprofile) as ProfileData;
-final eventData = Utils.decodeShareableIdentifier(nevent) as EventData;
-final addressData = Utils.decodeShareableIdentifier(naddr) as AddressData;
-```
-
-**NIP-05 Resolution:**
-```dart
-// Resolve NIP-05 identifier to public key
-final pubkey = await Utils.decodeNip05('alice@example.com');
-```
-
-**Event Utilities:**
-```dart
-// Generate event ID for partial event
-final eventId = Utils.getEventId(partialEvent, pubkey);
-
-// Check if event kind is replaceable
-final isReplaceable = Utils.isEventReplaceable(kind);
-```
-
-### Event Verification
-
-The verifier system validates BIP-340 signatures on nostr events.
-
-**Basic Verification:**
-
-```dart
-// Get the verifier from the provider
-final verifier = ref.read(verifierProvider);
-
-// Verify an event signature
-final isValid = verifier.verify(eventMap);
-if (!isValid) {
-  print('Event has invalid signature');
-}
-```
-
-**Custom Verifier Implementation:**
-
-```dart
-class CustomVerifier extends Verifier {
-  @override
-  bool verify(Map<String, dynamic> map) {
-    // Custom verification logic
-    if (map['sig'] == null || map['sig'] == '') {
-      return false;
-    }
-    
-    // Implement your verification logic here
-    return true; // or false based on verification result
-  }
-}
-
-// Override the verifier provider (proper way)
-ProviderScope(
-  overrides: [
-    verifierProvider.overrideWithValue(CustomVerifier()),
-  ],
-  child: MyApp(),
-)
-```
-
-**Verification Configuration:**
-
-```dart
-// Enable verification (default)
-final config = StorageConfiguration(
-  skipVerification: false,
-);
-
-// Disable verification for performance
-final config = StorageConfiguration(
-  skipVerification: true,
-);
-```
-
-**Verification in Storage Operations:**
-
-```dart
-// Events are automatically verified when saved (unless skipVerification: true)
-await ref.storage.save({signedEvent});
-
-// Manual verification
-final verifier = ref.read(verifierProvider);
-final isValid = verifier.verify(signedEvent.toMap());
-```
-
-### Error Handling
-
-Handle storage errors and network failures gracefully.
-
-```dart
-// Watch for storage errors
-ref.listen(storageNotifierProvider, (_, state) {
-  if (state is StorageError) {
-    print('Storage error: ${state.exception}');
-    // Show error UI or retry logic
-  }
-});
-
-// Handle query errors
-final queryState = ref.watch(
-  query<Note>(authors: {pubkey}),
-);
-
-switch (queryState) {
-  case StorageError():
-    return ErrorWidget(
-      message: queryState.exception.toString(),
-      onRetry: () {
-        // Trigger a new query
-        ref.invalidate(query<Note>(authors: {pubkey}));
-      },
-    );
-  case StorageLoading():
-    return LoadingWidget();
-  case StorageData():
-    return NotesList(notes: queryState.models);
-}
-
-// Handle network failures
-try {
-  await ref.storage.save({model});
-} catch (e) {
-  // Save locally only if remote fails
-  await ref.storage.save({model});
-  print('Remote save failed, saved locally: $e');
-}
-```
-
-## Design Notes 📝
-
-- Built on Riverpod providers (`storageNotifierProvider`, `query`, etc.).
-- The `Storage` interface acts similarly to a relay but is optimized for local use (e.g., storing replaceable event IDs, potentially storing decrypted data, managing eviction).
-- Queries (`ref.watch(query<...>(...))`) primarily interact with the local `Storage`.
-- By default, queries also trigger requests to configured remote relays. Results are saved to `Storage`, automatically updating watchers.
-- The system tracks query timestamps (`since`) to optimize subsequent fetches from relays.
-- Relay groups can be configured and used for publishing
-
-### Storage vs relay
-
-A storage is very close to a relay but has some key differences, it:
-
- - Stores replaceable event IDs as the main ID for querying
- - Discards event signatures after validation, so not meant for rebroadcasting
- - Tracks origin relays for events, as well as connection timestamps for subsequent time-based querying
- - Has more efficient interfaces for mass deleting data
- - Can store decrypted DMs or cashu tokens, cache profile images, etc
-
-## Contributing 📩
-
-Contributions are welcome. However, please open an issue to discuss your proposed changes *before* starting work on a pull request.
-
-## License 📄
-
-MIT
