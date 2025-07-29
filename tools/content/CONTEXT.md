@@ -120,6 +120,10 @@ This is a standard Flutter app with multi-platform support, but here are additio
 - `test/utils`: Testing utilities
 - `assets`: Static assets (remember to add any referenced assets to `pubspec.yaml`)
 
+**⚠️ CRITICAL: DO NOT MODIFY THE `tools` DIRECTORY**
+
+The `tools` directory contains essential Purplestack infrastructure including MCP servers, build scripts, and project configuration tools. **NEVER modify, delete, or add files to this directory.** Any changes to the `tools` directory will break the Purplestack development environment and MCP server functionality.
+
 ## Storage and Relay Pool Configuration
 
 Configure storage behavior and relay connections.
