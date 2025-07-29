@@ -1,6 +1,6 @@
 name: purplestack
 description: Agentic development stack for building Nostr-enabled Flutter applications
-version: 0.1.1
+version: 0.2.0
 
 publish_to: "none" # Remove this line if you wish to publish to pub.dev
 
@@ -27,9 +27,9 @@ dependencies:
   skeletonizer: ^2.1.0+1
   dart_emoji: ^0.2.0+2
   easy_image_viewer: ^1.5.1
-  models: ^0.3.0
-  purplebase: ^0.3.0
-  amber_signer: ^0.1.0
+  models: ^0.3.3
+  purplebase: ^0.3.3
+  amber_signer: ^0.2.0
   hooks_riverpod: ^2.6.1
   path: ^1.9.1
   google_fonts: ^6.2.1
