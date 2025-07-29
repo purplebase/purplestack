@@ -455,6 +455,21 @@ final partialProfile = PartialProfile()
 
 **Custom kinds sacrifice interoperability** - use as last resort only.
 
+### ⚠️ CRITICAL: Model Creation, Updates & Registration
+
+**For ANY model creation, updating, or registration work, ALWAYS search for recipes first:**
+
+Use `search_recipes` to find comprehensive implementation guidance before writing any model-related code. There are excellent recipes with step-by-step instructions for:
+- Creating custom models
+- Updating existing models
+- Registering new event kinds
+- Model relationships and validation
+- Best practices and common patterns
+
+**Always search recipes before implementing:** `search_recipes models` or `search_recipes custom-kinds`
+
+**For already registered kinds:** Also search for recipes to understand existing implementations - there should be information in `models-package-summary` (names are subject to change, always use recipe search to find current documentation).
+
 ### Basic Query Provider Usage
 
 The `query` provider has a filter-like API for querying Nostr events:
