@@ -48,5 +48,3 @@ app.*.map.json
 .fvm/
 .fvmrc
 .vscode/
-
-generate-context.sh

@@ -8,13 +8,6 @@ See [CONTEXT](CONTEXT.md) for more.
 
 Originally created to build the new version of [Zapstore](https://zapstore.dev) and to encourage many more freedom oriented tech tools in the store.
 
-## Change
-
-To modify the assistant's instructions or add new project-specific guidelines:
-
-1. Add a Markdown file in the context folder and run `./generate-context.sh`
-2. The changes take effect in the next session
-
 ## Sample environment setup
 
 For MacOS (may work with Homebrew on Linux) and just for guidance. View the respective projects' documentation for more.
