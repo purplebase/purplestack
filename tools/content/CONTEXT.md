@@ -253,7 +253,7 @@ Already implemented in `NoteParser`, useful for standalone hyperlink rendering:
 
 ##### Rich Text Content with NoteParser
 
-**CRITICAL**: Always use `NoteParser` for Nostr text notes (kind 1, 11, 1111):
+**CRITICAL**: Always use `NoteParser` for Nostr text content, of kind 1 or of any other kind, **except** for fields that are known to support Markdown. In that case, Markdown parsing should be used.
 
 ```dart
 import 'package:purplestack/widgets/common/note_parser.dart';
