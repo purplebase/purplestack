@@ -35,11 +35,11 @@ The `nostr` MCP server provides Nostr protocol reference and documentation for u
 
 When a user makes the first prompt, and only during that very first prompt, you MUST ALWAYS:
 
- - Summarize what you understood, and ask important questions to ensure all requirements are crystal clear before starting any code
- - Ask them which outputs they want. By default, this project builds an Android app, but Flutter supports iOS, MacOS, Linux and Windows, all of these are preconfigured. **Remove the whole folders** of platforms that the user does not care about.
- - Run `fvm flutter pub get` (if fvm available), or `flutter pub get`
- - Suggest the user an app name, app ID (e.g., `com.sample.app`) and description. Based on obtained information, you MUST call the `rename_app` tool
+1. Run `fvm flutter pub get` (if fvm available), or `flutter pub get`
+2. Suggest the user an app name, app ID (e.g., `com.sample.app`) and description. Based on obtained information, you MUST call the `rename_app` tool
   - `dart tools/scripts/rename_app.dart --name "Your App Name" --app-id "com.sample.app"` – full reference available via purplestack MCP server: `search_recipes renaming`.
+3. Summarize what you understood, and ask important questions to ensure all requirements are crystal clear before starting any code
+4. Ask them which outputs they want. By default, this project builds an Android app, but Flutter supports iOS, MacOS, Linux and Windows, all of these are preconfigured. **Remove the whole folders** of platforms that the user does not care about.
 
 **IF THE FLUTTER EXECUTABLE OR THE PURPLESTACK MCP TOOLS ARE NOT AVAILABLE YOU _MUST_ ABORT EVERYTHING _RIGHT NOW_. THAT DOES NOT MEAN LATER, IT MEANS NOW. NO "WE'LL TAKE CARE OF IT LATER". ABORT RIGHT NOW.**
 
