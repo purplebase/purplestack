@@ -297,6 +297,294 @@ Highly customizable calendar widget for any calendar functionality.
 
 **Use `async_button_builder` for ALL async operations** to provide proper user feedback and prevent multiple simultaneous operations.
 
+### Source Configuration & Behavior
+
+The `Source` parameter controls where data comes from and how queries behave. Choose the appropriate source based on your use case:
+
+#### LocalSource - Local Storage Only
+
+Only query local storage, never contact relays. Perfect for offline scenarios or when you only want cached data:
+
+```dart
+// Query only local storage
+final localNotes = ref.watch(
+  query<Note>(
+    authors: {pubkey},
+    source: LocalSource(),
+  ),
+);
+
+// Use in offline mode or for cached data display
+final offlineProfile = ref.watch(
+  query<Profile>(
+    authors: {pubkey},
+    source: LocalSource(),
+  ),
+);
+```
+
+#### RemoteSource - Relays Only
+
+Only query relays, never use local storage. Useful for real-time data or when you want fresh data:
+
+```dart
+// Query specific relay group
+final liveNotes = ref.watch(
+  query<Note>(
+    authors: {pubkey},
+    source: RemoteSource(
+      group: 'social',        // Use 'social' relay group
+      stream: true,           // Enable streaming (default)
+      background: false,      // Wait for EOSE before returning
+    ),
+  ),
+);
+
+// Query custom relay URLs (overrides group)
+final customNotes = ref.watch(
+  query<Note>(
+    authors: {pubkey},
+    source: RemoteSource(
+      relayUrls: {
+        'wss://custom1.relay.io',
+        'wss://custom2.relay.io',
+      },
+      stream: true,
+      background: true,       // Don't wait for EOSE
+    ),
+  ),
+);
+
+// Non-streaming query (one-time fetch)
+final staticNotes = ref.watch(
+  query<Note>(
+    authors: {pubkey},
+    source: RemoteSource(
+      stream: false,          // Disable streaming
+      background: false,      // Wait for complete response
+    ),
+  ),
+);
+```
+
+#### LocalAndRemoteSource - Hybrid Approach
+
+Query both local storage and relays. This is the most common pattern for responsive UIs:
+
+```dart
+// Default hybrid behavior - show local data immediately, update with remote
+final hybridNotes = ref.watch(
+  query<Note>(
+    authors: {pubkey},
+    source: LocalAndRemoteSource(
+      stream: true,           // Enable streaming (default)
+      background: true,       // Don't wait for EOSE (default)
+    ),
+  ),
+);
+
+// Wait for relay response before returning
+final completeNotes = ref.watch(
+  query<Note>(
+    authors: {pubkey},
+    source: LocalAndRemoteSource(
+      background: false,      // Wait for EOSE from relays
+    ),
+  ),
+);
+
+// Use specific relay group for remote queries
+final groupedNotes = ref.watch(
+  query<Note>(
+    authors: {pubkey},
+    source: LocalAndRemoteSource(
+      group: 'private',       // Use 'private' relay group
+      background: true,
+    ),
+  ),
+);
+
+// Override with custom relays at runtime
+final customHybridNotes = ref.watch(
+  query<Note>(
+    authors: {pubkey},
+    source: LocalAndRemoteSource(
+      relayUrls: {
+        'wss://priority.relay.io',
+        'wss://backup.relay.io',
+      },
+      background: true,
+    ),
+  ),
+);
+```
+
+#### Relay Selection Priority
+
+The framework selects relays in this order:
+1. **`relayUrls`** - When provided, these specific URLs are used
+2. **`group`** - Falls back to the relay group from `StorageConfiguration.relayGroups`
+3. **`defaultRelayGroup`** - Uses the default group when neither is specified
+
+#### Query Behavior Summary
+
+- **All queries** block until local storage returns results
+- **`background: false`** - Additionally blocks until EOSE from relays
+- **`background: true`** - Returns immediately after local results, relay results stream in
+- **Streaming phase** never blocks regardless of `background` setting
+- **`stream: false`** - Disables real-time updates after initial fetch
+
+#### Source Usage Examples
+
+```dart
+// Real-time feed with local cache
+final feedState = ref.watch(
+  query<Note>(
+    limit: 50,
+    source: LocalAndRemoteSource(stream: true, background: true),
+  ),
+);
+
+// Profile lookup with fallback
+final profileState = ref.watch(
+  query<Profile>(
+    authors: {pubkey},
+    source: LocalAndRemoteSource(background: false), // Wait for fresh data
+  ),
+);
+
+// Offline-first notes
+final offlineNotes = ref.watch(
+  query<Note>(
+    authors: {pubkey},
+    source: LocalSource(), // Local only
+  ),
+);
+
+// Live chat messages
+final chatMessages = ref.watch(
+  query<ChatMessage>(
+    tags: {'#e': {channelId}},
+    source: RemoteSource(
+      group: 'chat',
+      stream: true,
+      background: true,
+    ),
+  ),
+);
+```
+
+### Storage Operations
+
+#### Saving and Publishing Models
+
+```dart
+// Save locally only
+await ref.storage.save({model});
+
+// Publish to relays only
+await ref.storage.publish({model});
+
+// Save locally AND publish to relays
+await ref.storage.save({model});
+await ref.storage.publish({model});
+
+// Publish to specific relay group
+await ref.storage.publish(
+  {model}, 
+  source: RemoteSource(group: 'social'),
+);
+
+// Publish to custom relays
+await ref.storage.publish(
+  {model},
+  source: RemoteSource(
+    relayUrls: {'wss://my-relay.com'},
+  ),
+);
+```
+
+#### Advanced Storage Operations
+
+```dart
+// Query storage asynchronously with source control
+final notes = await ref.storage.query(
+  RequestFilter<Note>(authors: {pubkey}).toRequest(),
+  source: LocalAndRemoteSource(background: false),
+);
+
+// Synchronous local-only query
+final localNotes = ref.storage.querySync(
+  RequestFilter<Note>(authors: {pubkey}).toRequest(),
+);
+
+// Clear specific models from storage
+await ref.storage.clear(
+  RequestFilter<Note>(authors: {pubkey}).toRequest(),
+);
+
+// Clear all models from storage
+await ref.storage.clear();
+
+// Cancel ongoing subscriptions
+await ref.storage.cancel(request);
+```
+
+#### Building Complex Queries with RequestFilter
+
+```dart
+// Basic RequestFilter usage
+final basicRequest = RequestFilter<Note>(
+  authors: {pubkey1, pubkey2},
+  limit: 50,
+  since: DateTime.now().subtract(Duration(days: 7)),
+).toRequest();
+
+// Tag-based filtering
+final taggedRequest = RequestFilter<Note>(
+  tags: {
+    '#t': {'nostr', 'flutter'},
+    '#e': {replyToEventId},
+    '#p': {mentionedPubkey},
+  },
+).toRequest();
+
+// Time-based filtering
+final recentRequest = RequestFilter<Note>(
+  since: DateTime.now().subtract(Duration(hours: 24)),
+  until: DateTime.now(),
+  limit: 100,
+).toRequest();
+
+// Search queries (if supported by storage implementation)
+final searchRequest = RequestFilter<Note>(
+  search: 'hello world',
+  limit: 20,
+).toRequest();
+
+// Specific event IDs
+final specificRequest = RequestFilter<Note>(
+  ids: {eventId1, eventId2, eventId3},
+).toRequest();
+
+// Multiple filters in one request
+final complexRequest = Request<Note>([
+  RequestFilter<Note>(
+    authors: {pubkey1},
+    kinds: {1}, // Notes only
+    limit: 10,
+  ),
+  RequestFilter<Note>(
+    authors: {pubkey2}, 
+    kinds: {6}, // Reposts only
+    limit: 5,
+  ),
+]);
+
+// Use RequestFilter with storage operations
+final notes = await ref.storage.query(basicRequest);
+```
+
 **Pull-to-refresh guidelines:**
 DO NOT use pull-to-refresh when streaming data. Check the query `Source` stream property:
 
@@ -464,19 +752,134 @@ Use `search_recipes` to find comprehensive implementation guidance before writin
 
 **For already registered kinds:** Also search for recipes to understand existing implementations - there should be information in `models-package-summary` (names are subject to change, always use recipe search to find current documentation).
 
-### Basic Query Provider Usage
+### Query Providers Usage
 
-The `query` provider has a filter-like API for querying Nostr events:
+The framework provides three reactive query providers for different use cases:
+
+#### Typed Query Provider (`query<E>`)
+
+Query specific model types with full type safety and relationship loading:
 
 ```dart
 import 'package:models/models.dart';
 
-final state = ref.watch(query<Note>(authors: {pubkey1}, limit: 10));
+// Basic typed query
+final notesState = ref.watch(
+  query<Note>(
+    authors: {pubkey1, pubkey2},
+    limit: 20,
+    since: DateTime.now().subtract(Duration(days: 7)),
+  ),
+);
+
+// With relationship loading using the `and` operator
+final notesWithRelationsState = ref.watch(
+  query<Note>(
+    authors: {userPubkey},
+    limit: 10,
+    and: (note) => {
+      note.author,      // Load author profile
+      note.reactions,   // Load reactions  
+      note.zaps,        // Load zaps
+      // Nested relationships
+      ...note.reactions.map((reaction) => reaction.author),
+      ...note.zaps.map((zap) => zap.author),
+    },
+  ),
+);
+
+// Tag-based filtering
+final taggedNotes = ref.watch(
+  query<Note>(
+    tags: {
+      '#t': {'nostr', 'flutter'},
+      '#e': {replyToEventId},
+    },
+    limit: 50,
+  ),
+);
+```
+
+#### Multi-Kind Query Provider (`queryKinds`)
+
+Query events across multiple kinds without type constraints:
+
+```dart
+// Query multiple event kinds simultaneously
+final feedState = ref.watch(
+  queryKinds(
+    kinds: {1, 6}, // Notes and reposts
+    authors: {pubkey1, pubkey2, pubkey3},
+    limit: 30,
+    since: DateTime.now().subtract(Duration(hours: 24)),
+  ),
+);
+
+// Handle mixed model types
+switch (feedState) {
+  case StorageData(:final models):
+    return ListView.builder(
+      itemCount: models.length,
+      itemBuilder: (context, index) {
+        final model = models[index];
+        return switch (model.runtimeType) {
+          Note => NoteCard(model as Note),
+          Repost => RepostCard(model as Repost),
+          _ => GenericEventCard(model),
+        };
+      },
+    );
+  // ... handle other states
+}
+```
+
+#### Single Model Provider (`model<E>`)
+
+Watch a specific model instance for real-time updates:
+
+```dart
+// Watch an existing note for updates (reactions, zaps, etc.)
+final noteState = ref.watch(
+  model<Note>(
+    existingNote,
+    and: (note) => {note.author, note.reactions, note.zaps},
+  ),
+);
+
+// Automatically updates when relationships change
+final updatedNote = noteState.models.firstOrNull;
+if (updatedNote != null) {
+  return NoteDetailCard(updatedNote);
+}
+```
+
+#### Provider State Handling
+
+All query providers return `StorageState<E>` which can be pattern matched:
+
+```dart
+final notesState = ref.watch(query<Note>(authors: {pubkey}));
+
+switch (notesState) {
+  case StorageLoading():
+    return CircularProgressIndicator();
+  case StorageError(:final exception):
+    return ErrorWidget(exception.toString());
+  case StorageData(:final models):
+    return NotesList(models);
+}
+
+// Listen for state changes
+ref.listen(query<Note>(authors: {pubkey}), (previous, next) {
+  if (next is StorageData && previous is StorageLoading) {
+    print('Notes loaded: ${next.models.length}');
+  }
+});
 ```
 
 **Use `ref.storage` extension**: `await ref.storage.save({model});` instead of verbose provider syntax.
 
-Use the `and` operator to load relationships efficiently. Never call query inside loops!
+**Never call query inside loops** - use the `and` operator for relationship loading instead.
 
 ### Authentication Basics
 
