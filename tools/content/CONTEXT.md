@@ -255,6 +255,10 @@ Already implemented in `NoteParser`, useful for standalone hyperlink rendering:
 
 **CRITICAL**: Always use `NoteParser` for Nostr text content, of kind 1 notes, kind 9 chat messages, replies, or of any other kind, **except** for fields that are known to support Markdown. In that case, Markdown parsing should be used.
 
+**Profile Bios**: When adding profile bios (profile.about), automatically use `NoteParser` to handle Nostr entities, hashtags, and links.
+
+**IMPORTANT FOR NOTE PARSER**: When using `NoteParser`, by default use `NostrEntityWidget` and similar widgets to make replaced text tappable and interactive.
+
 ```dart
 import 'package:purplestack/widgets/common/note_parser.dart';
 
@@ -271,10 +275,18 @@ NoteParser.parse(
   context,
   note.content,
   textStyle: Theme.of(context).textTheme.bodyMedium,
-  onNostrEntity: (entity) => NostrEntityWidget(entity: entity),
+  onNostrEntity: (entity) => NostrEntityWidget(entity: entity), // Default: makes entities tappable
   onHttpUrl: (url) => UrlChipWidget(url: url),
   onMediaUrl: (url) => MediaWidget(url: url),
   onHashtag: (hashtag) => HashtagWidget(hashtag: hashtag),
+)
+
+// ✅ Profile bio example with NoteParser
+ParseContentWidget(
+  content: profile.about ?? '',
+  colorPair: [Theme.of(context).colorScheme.primary, Theme.of(context).colorScheme.secondary],
+  onProfileTap: (pubkey) => context.push('/profile/$pubkey'),
+  onHashtagTap: (hashtag) => context.push('/hashtag/$hashtag'),
 )
 ```
 
@@ -972,6 +984,12 @@ For debugging and monitoring, Purplebase exposes the `infoNotifierProvider` whic
 ### Git Guidelines
 
 **NEVER commit code changes on behalf of the user.** Always let the user review and commit their own changes.
+
+### AI Agent Workflow Guidelines
+
+**When finishing a feature or fix:**
+- **DO NOT run the app** (`flutter run...`) unless user explicitly asks to
+- **Be BRIEF when summarizing** what you produced - focus on key functionality implemented
 
 ### Common Widget Architecture
 
