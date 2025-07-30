@@ -597,7 +597,7 @@ class EventEntityWidget extends ConsumerWidget {
           children: [
             GestureDetector(
               onTap: onProfileTap != null
-                  ? () => onProfileTap!(note.event.pubkey)
+                  ? () => onProfileTap!(note.pubkey)
                   : null,
               child: Row(
                 children: [
@@ -618,8 +618,7 @@ class EventEntityWidget extends ConsumerWidget {
                                 ),
                           )
                         : _AnimatedLoadingChip(
-                            text:
-                                'npub1${note.event.pubkey.substring(0, 8)}...',
+                            text: 'npub1${note.pubkey.substring(0, 8)}...',
                             colorPair: colorPair,
                           ),
                   ),
@@ -807,7 +806,7 @@ class ReplyContextWidget extends ConsumerWidget {
 
     // Load the author for the replyTo note
     final authorState = ref.watch(
-      query<Profile>(authors: {replyToNote.event.pubkey}, limit: 1),
+      query<Profile>(authors: {replyToNote.pubkey}, limit: 1),
     );
 
     final author = authorState.models.firstOrNull;
@@ -817,7 +816,7 @@ class ReplyContextWidget extends ConsumerWidget {
 
     // Check if the reply-to note itself is still being loaded
     final replyToNoteState = ref.watch(
-      query<Note>(ids: {replyToNote.event.id}, limit: 1),
+      query<Note>(ids: {replyToNote.id}, limit: 1),
     );
 
     final isNoteLoading = replyToNoteState is StorageLoading;
@@ -875,7 +874,7 @@ class ReplyContextWidget extends ConsumerWidget {
                 // Parent note author
                 GestureDetector(
                   onTap: onProfileTap != null
-                      ? () => onProfileTap!(replyToNote.event.pubkey)
+                      ? () => onProfileTap!(replyToNote.pubkey)
                       : null,
                   child: Row(
                     children: [
@@ -889,12 +888,12 @@ class ReplyContextWidget extends ConsumerWidget {
                         child: isAuthorLoading || isNoteLoading
                             ? _AnimatedLoadingChip(
                                 text:
-                                    'npub1${replyToNote.event.pubkey.substring(0, 8)}...',
+                                    'npub1${replyToNote.pubkey.substring(0, 8)}...',
                                 colorPair: colorPair,
                               )
                             : Text(
                                 author?.nameOrNpub ??
-                                    '${replyToNote.event.pubkey.substring(0, 8)}...',
+                                    '${replyToNote.pubkey.substring(0, 8)}...',
                                 style: Theme.of(context).textTheme.bodySmall
                                     ?.copyWith(
                                       fontWeight: FontWeight.w500,
