@@ -75,9 +75,9 @@ dev_dependencies:
   # rules and activating additional ones.
   flutter_lints: ^5.0.0
   icons_launcher: ^3.0.1
-  dart_mcp: ^0.3.3
   bm25: ^2.2.3
   archive: ^4.0.7
+  mcp_dart: ^0.5.3
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec

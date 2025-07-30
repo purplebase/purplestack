@@ -8,7 +8,7 @@ Development stack designed for AI agents to build Nostr-enabled Flutter applicat
 
 ### Purplestack MCP Server
 
-**CRITICAL**: This project relies on the purplestack MCP server for recipes and documentation. **YOU _MUST_ VERIFY THE MCP SERVER IS WORKING BEFORE IMPLEMENTING ANY FEATURE**.
+**CRITICAL**: This project relies on the purplestack MCP server for essential recipes and `models` package documentation. **YOU MUST VERIFY THE MCP SERVER IS WORKING BEFORE IMPLEMENTING ANY FEATURE**. If the purplestack MCP server cannot be called or returns 0 tools, there is a configuration issue. To fix, the `agent.json` file may need to be modified to include the correct "cwd" pointing to the current project directory for the purplestack MCP server configuration, and/or the full path to the `dart` executable in the system.
 
 Available purplestack MCP tools:
 - `list_recipes` - List all available implementation recipes  
@@ -17,10 +17,6 @@ Available purplestack MCP tools:
 - `list_docs` - List all available documentation
 - `read_doc` - Read specific documentation
 - `search_docs` - Search documentation by keyword
-
-**⚠️ CRITICAL CHECK**: If the purplestack MCP server cannot be called or returns 0 tools, there is a configuration issue. **STOP ALL WORK** and prompt the user to fix the MCP server before proceeding.
-
-**Common Fix**: The `agent.json` file may need to be modified to include the correct "cwd" pointing to the current project directory for the purplestack MCP server configuration.
 
 **Usage Requirements:**
 - **BEFORE IMPLEMENTING ANY FEATURE**: Check for relevant recipes using `search_recipes` **AND** API documentation using `search_docs`
@@ -31,11 +27,9 @@ Available purplestack MCP tools:
 
 ### Nostr MCP Server
 
-The `nostr` MCP server provides Nostr protocol reference and documentation for understanding NIPs, event kinds, and protocol specifications. **It is only useful when implementing a custom model**.
+The `nostr` MCP server provides Nostr protocol reference and documentation for understanding NIPs, event kinds, and protocol specifications. **It is only really useful when implementing a custom model**.
 
-### First prompt
-
-**Do NOT skip this first step.**
+### CRITICAL: First prompt checklist
 
 When a user makes the first prompt, and only during that very first prompt, you MUST ALWAYS:
 

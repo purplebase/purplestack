@@ -2,12 +2,12 @@
   "model": "claude-sonnet-4",
   "temperature": 0.2,
   "mcpServers": {
-    "developer": {
+    "purplestack": {
       "type": "stdio",
-      "command": "npx",
+      "command": "dart",
       "args": [
-        "-y",
-        "@soapbox.pub/developer-mcp@latest"
+        "run",
+        "tools/scripts/purplestack_mcp.dart"
       ]
     },
     "nostr": {
@@ -18,13 +18,12 @@
         "@nostrbook/mcp@latest"
       ]
     },
-    "purplestack": {
+    "developer": {
       "type": "stdio",
-      "command": "dart",
+      "command": "npx",
       "args": [
-        "run",
-        "tools/scripts/purplestack_mcp.dart",
-        "tools/content/mcp-content.zip"
+        "-y",
+        "@soapbox.pub/developer-mcp@latest"
       ]
     }
   }

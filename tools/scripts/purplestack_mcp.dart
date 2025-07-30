@@ -3,17 +3,11 @@ import 'dart:convert';
 import 'package:archive/archive.dart';
 import 'package:path/path.dart' as path;
 import 'package:bm25/bm25.dart';
-import 'dart:async';
+import 'package:mcp_dart/mcp_dart.dart';
 
 /// Main entry point for the MCP server
-void main(List<String> arguments) async {
-  if (arguments.length != 1) {
-    print('Usage: dart run purplestack_mcp.dart <content-zip-path>');
-    exit(1);
-  }
-
-  final contentZipPath = arguments[0];
-  final server = PurpleStackMcpServer(contentZipPath);
+void main() async {
+  final server = PurpleStackMcpServer();
 
   try {
     await server.initialize();
@@ -26,7 +20,14 @@ void main(List<String> arguments) async {
 
 /// MCP server that serves recipes and API documentation
 class PurpleStackMcpServer {
-  final String contentZipPath;
+  static String get contentZipPath {
+    final scriptUri = Platform.script;
+    final scriptDir = path.dirname(scriptUri.toFilePath());
+    return path.normalize(
+      path.join(scriptDir, '..', 'content', 'mcp-content.zip'),
+    );
+  }
+
   late McpServer _server;
 
   // Content storage - now using full paths as keys
@@ -39,16 +40,16 @@ class PurpleStackMcpServer {
   List<String> _recipePaths = [];
   List<String> _docPaths = [];
 
-  PurpleStackMcpServer(this.contentZipPath);
+  PurpleStackMcpServer();
 
   /// Initialize the server and load content
   Future<void> initialize() async {
     // Create MCP server
     _server = McpServer(
-      name: 'Purplestack Context Server',
-      version: '1.0.0',
-      instructions:
-          'A server providing Purplestack recipes and API documentation for AI-powered development assistance.',
+      Implementation(name: 'Purplestack Context Server', version: '1.0.0'),
+      options: ServerOptions(
+        capabilities: ServerCapabilities(tools: ServerCapabilitiesTools()),
+      ),
     );
 
     // Load content from zip file
@@ -63,7 +64,7 @@ class PurpleStackMcpServer {
 
   /// Start the MCP server
   void start() {
-    _server.start();
+    _server.connect(StdioServerTransport());
   }
 
   /// Load content from the zip file
@@ -118,99 +119,81 @@ class PurpleStackMcpServer {
   /// Register all tools with the MCP server
   void _registerTools() {
     // List recipes tool
-    _server.registerTool(
-      McpTool(
-        name: 'list_recipes',
-        description: 'List all available recipes',
-        inputSchema: {'type': 'object', 'properties': {}},
-        handler: _listRecipes,
-      ),
+    _server.tool(
+      'list_recipes',
+      description: 'List all available recipes',
+      callback: ({args, extra}) async {
+        final result = await _listRecipes({});
+        return CallToolResult.fromContent(content: [TextContent(text: result)]);
+      },
     );
 
     // Read recipe tool
-    _server.registerTool(
-      McpTool(
-        name: 'read_recipe',
-        description: 'Read a specific recipe by name',
-        inputSchema: {
-          'type': 'object',
-          'properties': {
-            'name': {
-              'type': 'string',
-              'description': 'Name of the recipe to read',
-            },
-          },
-          'required': ['name'],
-        },
-        handler: _readRecipe,
-      ),
+    _server.tool(
+      'read_recipe',
+      description: 'Read a specific recipe by name',
+      inputSchemaProperties: {
+        'name': {'type': 'string', 'description': 'Name of the recipe to read'},
+      },
+      callback: ({args, extra}) async {
+        final result = await _readRecipe(args ?? {});
+        return CallToolResult.fromContent(content: [TextContent(text: result)]);
+      },
     );
 
     // Search recipes tool
-    _server.registerTool(
-      McpTool(
-        name: 'search_recipes',
-        description: 'Search recipes by query',
-        inputSchema: {
-          'type': 'object',
-          'properties': {
-            'query': {
-              'type': 'string',
-              'description': 'Search query for recipes',
-            },
-          },
-          'required': ['query'],
-        },
-        handler: _searchRecipes,
-      ),
+    _server.tool(
+      'search_recipes',
+      description: 'Search recipes by query',
+      inputSchemaProperties: {
+        'query': {'type': 'string', 'description': 'Search query for recipes'},
+      },
+      callback: ({args, extra}) async {
+        final result = await _searchRecipes(args ?? {});
+        return CallToolResult.fromContent(content: [TextContent(text: result)]);
+      },
     );
 
     // List docs tool
-    _server.registerTool(
-      McpTool(
-        name: 'list_docs',
-        description: 'List all available documentation',
-        inputSchema: {'type': 'object', 'properties': {}},
-        handler: _listDocs,
-      ),
+    _server.tool(
+      'list_docs',
+      description: 'List all available documentation',
+      callback: ({args, extra}) async {
+        final result = await _listDocs({});
+        return CallToolResult.fromContent(content: [TextContent(text: result)]);
+      },
     );
 
     // Read doc tool
-    _server.registerTool(
-      McpTool(
-        name: 'read_doc',
-        description: 'Read a specific document by name',
-        inputSchema: {
-          'type': 'object',
-          'properties': {
-            'name': {
-              'type': 'string',
-              'description': 'Name of the document to read',
-            },
-          },
-          'required': ['name'],
+    _server.tool(
+      'read_doc',
+      description: 'Read a specific document by name',
+      inputSchemaProperties: {
+        'name': {
+          'type': 'string',
+          'description': 'Name of the document to read',
         },
-        handler: _readDoc,
-      ),
+      },
+      callback: ({args, extra}) async {
+        final result = await _readDoc(args ?? {});
+        return CallToolResult.fromContent(content: [TextContent(text: result)]);
+      },
     );
 
     // Search docs tool
-    _server.registerTool(
-      McpTool(
-        name: 'search_docs',
-        description: 'Search documentation by query',
-        inputSchema: {
-          'type': 'object',
-          'properties': {
-            'query': {
-              'type': 'string',
-              'description': 'Search query for documentation',
-            },
-          },
-          'required': ['query'],
+    _server.tool(
+      'search_docs',
+      description: 'Search documentation by query',
+      inputSchemaProperties: {
+        'query': {
+          'type': 'string',
+          'description': 'Search query for documentation',
         },
-        handler: _searchDocs,
-      ),
+      },
+      callback: ({args, extra}) async {
+        final result = await _searchDocs(args ?? {});
+        return CallToolResult.fromContent(content: [TextContent(text: result)]);
+      },
     );
   }
 
@@ -386,193 +369,4 @@ class PurpleStackMcpServer {
         .take(3)
         .toList();
   }
-}
-
-/// Minimal MCP framework for stdio-only servers
-class McpServer {
-  final String name;
-  final String version;
-  final String? instructions;
-
-  final Map<String, McpTool> _tools = {};
-  final StreamController<String> _outputController = StreamController<String>();
-
-  McpServer({required this.name, required this.version, this.instructions});
-
-  /// Register a tool with the server
-  void registerTool(McpTool tool) {
-    _tools[tool.name] = tool;
-  }
-
-  /// Start the MCP server over stdio
-  void start() {
-    // Set up output stream to stdout
-    _outputController.stream.listen((response) {
-      stdout.writeln(response);
-      stdout.flush();
-    });
-
-    // Listen to stdin for JSON-RPC requests
-    stdin
-        .transform(utf8.decoder)
-        .transform(const LineSplitter())
-        .where((line) => line.trim().isNotEmpty)
-        .listen(
-          _handleRequestLine,
-          onError: (error) {
-            stderr.writeln('Error reading stdin: $error');
-          },
-        );
-  }
-
-  /// Handle incoming JSON-RPC request line
-  void _handleRequestLine(String line) async {
-    try {
-      final requestJson = jsonDecode(line) as Map<String, dynamic>;
-      await _handleRequest(requestJson);
-    } catch (e) {
-      stderr.writeln('Error parsing JSON: $e');
-      _sendError(null, -32700, 'Parse error', null);
-    }
-  }
-
-  /// Handle a JSON-RPC request
-  Future<void> _handleRequest(Map<String, dynamic> request) async {
-    final method = request['method'] as String?;
-    final params = request['params'] as Map<String, dynamic>?;
-    final id = request['id'];
-
-    if (method == null) {
-      _sendError(id, -32600, 'Invalid Request', null);
-      return;
-    }
-
-    try {
-      Map<String, dynamic>? result;
-
-      switch (method) {
-        case 'initialize':
-          result = _handleInitialize(params);
-          break;
-        case 'initialized':
-          // No response needed for notification
-          return;
-        case 'ping':
-          result = {};
-          break;
-        case 'tools/list':
-          result = _handleToolsList();
-          break;
-        case 'tools/call':
-          result = await _handleToolCall(params);
-          break;
-        default:
-          _sendError(id, -32601, 'Method not found', {'method': method});
-          return;
-      }
-
-      _sendResult(id, result);
-    } catch (e) {
-      _sendError(id, -32603, 'Internal error', {'error': e.toString()});
-    }
-  }
-
-  /// Handle initialize request
-  Map<String, dynamic> _handleInitialize(Map<String, dynamic>? params) {
-    return {
-      'protocolVersion': '2024-11-05',
-      'capabilities': {
-        'tools': {'listChanged': true},
-      },
-      'serverInfo': {'name': name, 'version': version},
-      if (instructions != null) 'instructions': instructions,
-    };
-  }
-
-  /// Handle tools/list request
-  Map<String, dynamic> _handleToolsList() {
-    return {
-      'tools': _tools.values
-          .map(
-            (tool) => {
-              'name': tool.name,
-              'description': tool.description,
-              'inputSchema': tool.inputSchema,
-            },
-          )
-          .toList(),
-    };
-  }
-
-  /// Handle tools/call request
-  Future<Map<String, dynamic>> _handleToolCall(
-    Map<String, dynamic>? params,
-  ) async {
-    if (params == null) {
-      throw Exception('Missing parameters for tools/call');
-    }
-
-    final toolName = params['name'] as String?;
-    final arguments = params['arguments'] as Map<String, dynamic>? ?? {};
-
-    if (toolName == null) {
-      throw Exception('Missing tool name');
-    }
-
-    final tool = _tools[toolName];
-    if (tool == null) {
-      throw Exception('Tool not found: $toolName');
-    }
-
-    try {
-      final result = await tool.handler(arguments);
-      return {
-        'content': [
-          {'type': 'text', 'text': result},
-        ],
-      };
-    } catch (e) {
-      return {
-        'content': [
-          {'type': 'text', 'text': 'Error: $e'},
-        ],
-        'isError': true,
-      };
-    }
-  }
-
-  /// Send successful result
-  void _sendResult(dynamic id, Map<String, dynamic>? result) {
-    final response = {'jsonrpc': '2.0', 'id': id, 'result': result};
-    _outputController.add(jsonEncode(response));
-  }
-
-  /// Send error response
-  void _sendError(dynamic id, int code, String message, dynamic data) {
-    final response = {
-      'jsonrpc': '2.0',
-      'id': id,
-      'error': {
-        'code': code,
-        'message': message,
-        if (data != null) 'data': data,
-      },
-    };
-    _outputController.add(jsonEncode(response));
-  }
-}
-
-/// Represents an MCP tool
-class McpTool {
-  final String name;
-  final String description;
-  final Map<String, dynamic> inputSchema;
-  final Future<String> Function(Map<String, dynamic> arguments) handler;
-
-  McpTool({
-    required this.name,
-    required this.description,
-    required this.inputSchema,
-    required this.handler,
-  });
 }
