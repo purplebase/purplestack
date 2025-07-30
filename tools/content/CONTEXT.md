@@ -253,7 +253,7 @@ Already implemented in `NoteParser`, useful for standalone hyperlink rendering:
 
 ##### Rich Text Content with NoteParser
 
-**CRITICAL**: Always use `NoteParser` for Nostr text content, of kind 1 or of any other kind, **except** for fields that are known to support Markdown. In that case, Markdown parsing should be used.
+**CRITICAL**: Always use `NoteParser` for Nostr text content, of kind 1 notes, kind 9 chat messages, replies, or of any other kind, **except** for fields that are known to support Markdown. In that case, Markdown parsing should be used.
 
 ```dart
 import 'package:purplestack/widgets/common/note_parser.dart';
@@ -734,10 +734,11 @@ final partialProfile = PartialProfile()
 
 **BEFORE implementing ANY Nostr feature:**
 
-1. **Check existing models** via purplestack MCP server (`search_docs models`)
-2. **Search all NIPs** using `mcp_nostr_read_nips_index` tool
-3. **Investigate thoroughly** with `mcp_nostr_read_nip` for relevant NIPs
-4. **Only create custom kinds** after proving no existing solution works
+1. **Analyze the user prompt** to identify exactly which model makes most sense for their use-case (e.g. if they mention "chat message" use `ChatMessage`, not `Note`)
+2. **Check existing models** via purplestack MCP server (`search_docs models`)
+3. **Search all NIPs** using `mcp_nostr_read_nips_index` tool
+4. **Investigate thoroughly** with `mcp_nostr_read_nip` for relevant NIPs
+5. **Only create custom kinds** after proving no existing solution works
 
 **Custom kinds sacrifice interoperability** - use as last resort only.
 
