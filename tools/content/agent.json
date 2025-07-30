@@ -4,10 +4,9 @@
   "mcpServers": {
     "purplestack": {
       "type": "stdio",
-      "command": "dart",
+      "command": "bash",
       "args": [
-        "run",
-        "tools/scripts/purplestack_mcp.dart"
+        "tools/scripts/run-mcp.sh"
       ]
     },
     "nostr": {
