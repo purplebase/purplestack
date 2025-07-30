@@ -566,7 +566,7 @@ packages:
     description:
       path: "."
       ref: main
-      resolved-ref: a8d50bf9572739e6b773e84d3b70a25d1a6958fe
+      resolved-ref: dd9d8043977308e95ea1cf1ae106bc090306307e
       url: "https://github.com/purplebase/models"
     source: git
     version: "0.3.3"
