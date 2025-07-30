@@ -8,7 +8,7 @@ Development stack designed for AI agents to build Nostr-enabled Flutter applicat
 
 ### Purplestack MCP Server
 
-**CRITICAL**: This project relies on the purplestack MCP server for essential recipes and `models` package documentation. **YOU MUST VERIFY THE MCP SERVER IS WORKING BEFORE IMPLEMENTING ANY FEATURE**. If the purplestack MCP server cannot be called or returns 0 tools, there is a configuration issue. To fix, the `agent.json` file may need to be modified to include the correct "cwd" pointing to the current project directory for the purplestack MCP server configuration, and/or the full path to the `dart` executable in the system.
+**CRITICAL**: This project relies on the purplestack MCP server for essential recipes and `models` package documentation. **YOU MUST VERIFY THE MCP SERVER IS WORKING BEFORE IMPLEMENTING ANY FEATURE**. If the purplestack MCP server cannot be called or returns 0 tools, there is a configuration issue. To fix, the `agent.json` (or `mcp.json` or equivalent) file may need to be modified to include the correct "cwd" pointing to the current project directory for the purplestack MCP server configuration, and/or the full path to the `dart` executable in the system.
 
 Available purplestack MCP tools:
 - `list_recipes` - List all available implementation recipes  
