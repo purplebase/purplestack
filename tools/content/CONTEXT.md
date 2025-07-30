@@ -8,7 +8,9 @@ Development stack designed for AI agents to build Nostr-enabled Flutter applicat
 
 ### Purplestack MCP Server
 
-**CRITICAL**: This project relies on the purplestack MCP server for essential recipes and `models` package documentation. **YOU MUST VERIFY THE MCP SERVER IS WORKING BEFORE IMPLEMENTING ANY FEATURE**. If the purplestack MCP server cannot be called or returns 0 tools, there is a configuration issue. To fix, the `agent.json` (or `mcp.json` or equivalent) file may need to be modified to include the correct "cwd" pointing to the current project directory for the purplestack MCP server configuration, and/or the full path to the `dart` executable in the system.
+**CRITICAL**: This project relies on the purplestack MCP server for essential recipes and `models` package documentation. **YOU MUST VERIFY THE MCP SERVER IS WORKING BEFORE IMPLEMENTING ANY FEATURE**. If the purplestack MCP server cannot be called or returns 0 tools, there is a configuration issue. Fixes:
+ - Run `flutter pub get`, then you must prompt the user to reload their IDE/environment
+ - the `agent.json` (or `mcp.json` or equivalent) file may need to be modified to include the correct "cwd" pointing to the current project directory for the purplestack MCP server configuration, and/or the full path to the `dart` executable in the system
 
 Available purplestack MCP tools:
 - `list_recipes` - List all available implementation recipes  
@@ -37,7 +39,9 @@ When a user makes the first prompt, and only during that very first prompt, you 
  - Ask them which outputs they want. By default, this project builds an Android app, but Flutter supports iOS, MacOS, Linux and Windows, all of these are preconfigured. **Remove the whole folders** of platforms that the user does not care about.
  - Run `fvm flutter pub get` (if fvm available), or `flutter pub get`
  - Suggest the user an app name, app ID (e.g., `com.sample.app`) and description. Based on obtained information, you MUST call the `rename_app` tool
-  - `dart tools/bin/rename_app.dart --name "Your App Name" --app-id "com.sample.app"` – full reference available via purplestack MCP server: `search_recipes renaming`.
+  - `dart tools/scripts/rename_app.dart --name "Your App Name" --app-id "com.sample.app"` – full reference available via purplestack MCP server: `search_recipes renaming`.
+
+**IF THE FLUTTER EXECUTABLE OR THE PURPLESTACK MCP TOOLS ARE NOT AVAILABLE YOU _MUST_ ABORT EVERYTHING _RIGHT NOW_. THAT DOES NOT MEAN LATER, IT MEANS NOW. NO "WE'LL TAKE CARE OF IT LATER". ABORT RIGHT NOW.**
 
 ## Technology Stack
 

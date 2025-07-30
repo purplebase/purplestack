@@ -5,7 +5,8 @@
   "image": "https://raw.githubusercontent.com/purplebase/purplestack/refs/heads/main/assets/images/purplestack.png",
   "commands": [
     "npx",
-    "dart"
+    "dart",
+    "flutter"
   ],
   "uri": "git+https://github.com/purplebase/purplestack.git",
   "tech": [
