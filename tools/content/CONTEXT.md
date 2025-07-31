@@ -85,7 +85,7 @@ When `fvm` is available, always use it for Flutter commands to ensure consistent
 ```bash
 # Use fvm flutter instead of direct flutter commands
 fvm flutter run
-fvm flutter build apk --target-platform android-arm64  # For Android APK distribution
+fvm flutter build apk --target-platform android-arm64 --split-per-abi  # For Android APK distribution
 fvm flutter analyze
 ```
 
@@ -668,6 +668,7 @@ When users specify color schemes, use Material 3's color system:
 - Follow Material 3 design patterns and component variants
 - **Always prioritize using Theme colors**: Fetch colors from `Theme.of(context).colorScheme` unless they don't fit the theme
 - Use theme-based styling: `Theme.of(context).colorScheme.primary`
+- **Deprecated Methods**: Try to use `surface` and `onSurface` instead of `background` and `onBackground`. Try to use `.withValues(alpha: 0.5)` instead of `.withOpacity(0.5)`
 - Implement responsive design with breakpoints
 - Add hover and focus states for interactive elements
 
@@ -1048,7 +1049,7 @@ Default: Private keys handled in-memory only with `Bip340PrivateKeySigner`. For 
 
 For correct app renaming and icon generation, use: `search_recipes renaming`.
 
-When building for Android distribution: `fvm flutter build apk --target-platform android-arm64`
+When building for Android distribution: `fvm flutter build apk --target-platform android-arm64 --split-per-abi`
 
 Consider using [Zapstore](https://zapstore.dev) for distribution.
 

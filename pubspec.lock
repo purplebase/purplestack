@@ -736,7 +736,7 @@ packages:
     description:
       path: "."
       ref: master
-      resolved-ref: "7817845e1ffe779abfde3965446bf2b4cc8a9847"
+      resolved-ref: dab3602c49c06ab885aa0b47c5dc06438d05cdf3
       url: "https://github.com/purplebase/purplebase"
     source: git
     version: "0.3.3"
