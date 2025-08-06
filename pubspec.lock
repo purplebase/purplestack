@@ -365,18 +365,18 @@ packages:
     dependency: "direct main"
     description:
       name: go_router
-      sha256: c489908a54ce2131f1d1b7cc631af9c1a06fac5ca7c449e959192089f9489431
+      sha256: "8b1f37dfaf6e958c6b872322db06f946509433bec3de753c3491a42ae9ec2b48"
       url: "https://pub.dev"
     source: hosted
-    version: "16.0.0"
+    version: "16.1.0"
   google_fonts:
     dependency: "direct main"
     description:
       name: google_fonts
-      sha256: b1ac0fe2832c9cc95e5e88b57d627c5e68c223b9657f4b96e1487aa9098c7b82
+      sha256: df9763500dadba0155373e9cb44e202ce21bd9ed5de6bdbd05c5854e86839cb8
       url: "https://pub.dev"
     source: hosted
-    version: "6.2.1"
+    version: "6.3.0"
   hooks_riverpod:
     dependency: "direct main"
     description:
@@ -566,7 +566,7 @@ packages:
     description:
       path: "."
       ref: main
-      resolved-ref: dd9d8043977308e95ea1cf1ae106bc090306307e
+      resolved-ref: "05db73924cfc468ffcf10a5dbac17f9f7ca40b51"
       url: "https://github.com/purplebase/models"
     source: git
     version: "0.3.3"
@@ -736,7 +736,7 @@ packages:
     description:
       path: "."
       ref: master
-      resolved-ref: dab3602c49c06ab885aa0b47c5dc06438d05cdf3
+      resolved-ref: "33fa3d44f07de05a2d984e327966248e6d5bbfc2"
       url: "https://github.com/purplebase/purplebase"
     source: git
     version: "0.3.3"
@@ -934,10 +934,10 @@ packages:
     dependency: "direct main"
     description:
       name: sqlite3_flutter_libs
-      sha256: fd996da5515a73aacd0a04ae7063db5fe8df42670d974df4c3ee538c652eef2e
+      sha256: "2b03273e71867a8a4d030861fc21706200debe5c5858a4b9e58f4a1c129586a4"
       url: "https://pub.dev"
     source: hosted
-    version: "0.5.38"
+    version: "0.5.39"
   stack_trace:
     dependency: transitive
     description:
@@ -1150,10 +1150,10 @@ packages:
     dependency: transitive
     description:
       name: video_player_avfoundation
-      sha256: d716c279c940b5b4625da6bae625e88540d4150a8f3390f961454245e9848675
+      sha256: "509ef9cfe7a3379783ccf306d45f5b5fc9db747401f956ce31c963417019e48e"
       url: "https://pub.dev"
     source: hosted
-    version: "2.8.1"
+    version: "2.8.2"
   video_player_platform_interface:
     dependency: transitive
     description:
