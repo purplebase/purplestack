@@ -23,7 +23,7 @@ Available purplestack MCP tools:
 **Usage Requirements:**
 - **BEFORE IMPLEMENTING ANY FEATURE**: Check for relevant recipes using `search_recipes` **AND** API documentation using `search_docs`
 - **For ANY code implementation**: Consult both recipes and documentation first
-- **Always search first**: Use `search_recipes` and `search_docs` before writing any code
+- **Always search first**: Use `search_recipes` and `search_docs` before writing any code. Always prioritize looking for documentation (`search_docs`) and recipes (purplestack MCP) before calling the nostr MCP
 - If no recipes or docs are found for your use case, proceed with standard implementation
 - Recipes are complete examples showing how to approach specific features
 
@@ -309,7 +309,9 @@ Highly customizable calendar widget for any calendar functionality.
 
 ### Loading States & Async Patterns
 
-**Use skeleton loading** for structured content (feeds, profiles, forms). **Use spinners** only for buttons or short operations.
+**Use skeleton loading** for structured content (feeds, profiles, forms). **Never use spinners for whole screen** - always use skeletons that roughly match what is being loaded. Skeletons should be per-widget, not per-screen, showing various skeleton widgets for different screen areas.
+
+**Use spinners only for**: buttons, images, and other media loading.
 
 **Use `async_button_builder` for ALL async operations** to provide proper user feedback and prevent multiple simultaneous operations.
 
@@ -899,6 +901,10 @@ ref.listen(query<Note>(authors: {pubkey}), (previous, next) {
 
 **Never call query inside loops** - use the `and` operator for relationship loading instead.
 
+**Always prefer using `query` provider directly on widgets** - only wrap them if logic is complex. Do not create unnecessary indirection layers.
+
+**Relationship loading requirements**: When using any relationship in your code, ensure it has been previously loaded via the `and` argument in `query`. In `query`'s `and` argument, avoid complex operations using where/map - these should only be used for simple Dart filtering.
+
 ### Authentication Basics
 
 Always use `amber_signer` package first for NIP-55 compatible authentication. See recipe: `search_recipes amber-authentication`.
@@ -910,6 +916,8 @@ Use `storage.publish(...)` for relay publishing. Note that `storage.save()` and 
 ### NIP-19 Identifiers
 
 Nostr identifiers (`npub`, `nsec`, `note`, `nprofile`, `nevent`, `naddr`) can be encoded/decoded via `Utils.encodeShareableIdentifier` and `Utils.decodeShareableIdentifier`.
+
+**Never show pubkeys in UI** - always prefer npub format for user-facing display.
 
 ## Advanced Nostr Features
 
@@ -971,6 +979,7 @@ For debugging and monitoring, Purplebase exposes the `infoNotifierProvider` whic
 - Fix ALL compiler warnings and errors immediately - goal is ZERO compiler messages
 - Never use artificial waits (`Future.delayed`) - properly await futures instead
 - **NEVER use polling** - always subscribe to listeners and streams
+- **NO code repetition** - follow DRY principle (minor exceptions allowed)
 - Use Flutter best practices
 
 ### Architecture
@@ -991,6 +1000,7 @@ For debugging and monitoring, Purplebase exposes the `infoNotifierProvider` whic
 **When finishing a feature or fix:**
 - **DO NOT run the app** (`flutter run...`) unless user explicitly asks to
 - **Be BRIEF when summarizing** what you produced - focus on key functionality implemented
+- **DO NOT celebrate** - instead ask the user if they are satisfied or need further changes
 
 ### Common Widget Architecture
 
