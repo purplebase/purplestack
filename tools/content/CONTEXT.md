@@ -255,7 +255,7 @@ Already implemented in `NoteParser`, useful for standalone hyperlink rendering:
 
 **CRITICAL**: Always use `NoteParser` for Nostr text content, of kind 1 notes, kind 9 chat messages, replies, or of any other kind, **except** for fields that are known to support Markdown. In that case, Markdown parsing should be used.
 
-**Profile Bios**: When adding profile bios (profile.about), automatically use `NoteParser` to handle Nostr entities, hashtags, and links.
+**Profile's About**: When adding profile about information (`profile.about`), automatically use `NoteParser` to handle Nostr entities, hashtags, and links.
 
 **IMPORTANT FOR NOTE PARSER**: When using `NoteParser`, by default use `NostrEntityWidget` and similar widgets to make replaced text tappable and interactive.
 
@@ -281,7 +281,7 @@ NoteParser.parse(
   onHashtag: (hashtag) => HashtagWidget(hashtag: hashtag),
 )
 
-// ✅ Profile bio example with NoteParser
+// ✅ Profile about example with NoteParser
 ParseContentWidget(
   content: profile.about ?? '',
   colorPair: [Theme.of(context).colorScheme.primary, Theme.of(context).colorScheme.secondary],
@@ -740,7 +740,7 @@ final partialNote = PartialNote("content", tags: {'farming'});
 // Use model setters and methods
 final partialProfile = PartialProfile()
   ..displayName = 'New Name'
-  ..about = 'Updated bio';
+  ..about = 'Updated about';
 ```
 
 ### ⚠️ CRITICAL: Use Existing Models First
