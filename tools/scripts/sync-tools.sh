@@ -18,3 +18,5 @@ git -C "$UPSTREAM_LOCAL_DIR" reset --hard "origin/$UPSTREAM_BRANCH"
 # 3. copy only the folder we care about
 rm -rf "$FOLDER"
 cp -a "$UPSTREAM_LOCAL_DIR/$FOLDER" "$(dirname "$FOLDER")"
+
+fvm flutter pub upgrade || flutter pub upgrade
