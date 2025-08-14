@@ -33,13 +33,19 @@ The `nostr` MCP server provides Nostr protocol reference and documentation for u
 
 ### CRITICAL: First prompt checklist
 
-When a user makes the first prompt, and only during that very first prompt, you MUST ALWAYS:
+**First prompt definition**: A prompt is considered "first" if the app has not been renamed yet (i.e., app ID is still "com.example.purplestack"). This is determined by app state, not session state.
+
+When handling a first prompt (as defined above), you MUST ALWAYS:
 
 1. Run `fvm flutter pub get` (if fvm available), or `flutter pub get`
-2. Suggest the user an app name, app ID (e.g., `com.sample.app`) and description. Based on obtained information, you MUST call the `rename_app` tool
+2. Initialize a fresh git repository **IF AND ONLY IF THE FIRST GIT COMMIT HASH IN THE REPOSITORY IS `c99f911fa1c2fd25e6a401f146ae5e0f53c459b1`:**
+   - `rm -rf .git/` (remove existing git history)
+   - `git init` (start fresh repository)
+   - Make sure you are NOT deleting commits by the user!
+3. Suggest the user an app name, app ID (e.g., `com.sample.app`) and description. Based on obtained information, you MUST call the `rename_app` tool
   - `dart tools/scripts/rename_app.dart --name "Your App Name" --app-id "com.sample.app"` – full reference available via purplestack MCP server: `search_recipes renaming`.
-3. Summarize what you understood, and ask important questions to ensure all requirements are crystal clear before starting any code
-4. Ask them which outputs they want. By default, this project builds an Android app, but Flutter supports iOS, MacOS, Linux and Windows, all of these are preconfigured. **Remove the whole folders** of platforms that the user does not care about.
+4. Summarize what you understood, and ask important questions to ensure all requirements are crystal clear before starting any code
+5. Ask them which outputs they want. By default, this project builds an Android app, but Flutter supports iOS, MacOS, Linux and Windows, all of these are preconfigured. **Remove the whole folders** of platforms that the user does not care about.
 
 **IF THE FLUTTER EXECUTABLE OR THE PURPLESTACK MCP TOOLS ARE NOT AVAILABLE YOU _MUST_ ABORT EVERYTHING _RIGHT NOW_. THAT DOES NOT MEAN LATER, IT MEANS NOW. NO "WE'LL TAKE CARE OF IT LATER". ABORT RIGHT NOW.**
 
